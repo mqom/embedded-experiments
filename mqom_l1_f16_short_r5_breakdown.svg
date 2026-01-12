@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="680" viewBox="0 0 980 680" overflow="hidden">
+  <rect width="100%" height="100%" fill="white"/>
+  <text x="490" y="28" text-anchor="middle" font-family="sans-serif" font-size="16">MQOM L1 F16 short R5 signing — detailed breakdown (Megacycles)</text>
+
+  <!-- Geometry: left=140, right=960 => width=820px; max=900 Mc => 1 Mc = 0.911111111px -->
+
+  <!-- X axis -->
+  <line x1="140" y1="240" x2="960" y2="240" stroke="#000" stroke-width="1"/>
+
+  <!-- Grid + ticks (0..900 step 100) -->
+  <g font-family="sans-serif" font-size="11">
+    <line x1="140.000000" y1="70" x2="140.000000" y2="240" stroke="#e6e6e6"/><line x1="140.000000" y1="240" x2="140.000000" y2="246" stroke="#000"/><text x="140.000000" y="262" text-anchor="middle">0</text>
+    <line x1="231.111111" y1="70" x2="231.111111" y2="240" stroke="#e6e6e6"/><line x1="231.111111" y1="240" x2="231.111111" y2="246" stroke="#000"/><text x="231.111111" y="262" text-anchor="middle">100</text>
+    <line x1="322.222222" y1="70" x2="322.222222" y2="240" stroke="#e6e6e6"/><line x1="322.222222" y1="240" x2="322.222222" y2="246" stroke="#000"/><text x="322.222222" y="262" text-anchor="middle">200</text>
+    <line x1="413.333333" y1="70" x2="413.333333" y2="240" stroke="#e6e6e6"/><line x1="413.333333" y1="240" x2="413.333333" y2="246" stroke="#000"/><text x="413.333333" y="262" text-anchor="middle">300</text>
+    <line x1="504.444444" y1="70" x2="504.444444" y2="240" stroke="#e6e6e6"/><line x1="504.444444" y1="240" x2="504.444444" y2="246" stroke="#000"/><text x="504.444444" y="262" text-anchor="middle">400</text>
+    <line x1="595.555556" y1="70" x2="595.555556" y2="240" stroke="#e6e6e6"/><line x1="595.555556" y1="240" x2="595.555556" y2="246" stroke="#000"/><text x="595.555556" y="262" text-anchor="middle">500</text>
+    <line x1="686.666667" y1="70" x2="686.666667" y2="240" stroke="#e6e6e6"/><line x1="686.666667" y1="240" x2="686.666667" y2="246" stroke="#000"/><text x="686.666667" y="262" text-anchor="middle">600</text>
+    <line x1="777.777778" y1="70" x2="777.777778" y2="240" stroke="#e6e6e6"/><line x1="777.777778" y1="240" x2="777.777778" y2="246" stroke="#000"/><text x="777.777778" y="262" text-anchor="middle">700</text>
+    <line x1="868.888889" y1="70" x2="868.888889" y2="240" stroke="#e6e6e6"/><line x1="868.888889" y1="240" x2="868.888889" y2="246" stroke="#000"/><text x="868.888889" y="262" text-anchor="middle">800</text>
+    <line x1="960.000000" y1="70" x2="960.000000" y2="240" stroke="#e6e6e6"/><line x1="960.000000" y1="240" x2="960.000000" y2="246" stroke="#000"/><text x="960.000000" y="262" text-anchor="middle">900</text>
+  </g>
+
+  <!-- Bars -->
+  <text x="130" y="95" text-anchor="end" font-family="sans-serif" font-size="13">LUT</text>
+  <text x="130" y="135" text-anchor="end" font-family="sans-serif" font-size="13">Balanced</text>
+  <text x="130" y="175" text-anchor="end" font-family="sans-serif" font-size="13">Memory</text>
+  <text x="130" y="215" text-anchor="end" font-family="sans-serif" font-size="13">Hardware</text>
+
+  <rect x="140.000000" y="80" width="26.691157" height="20" fill="#f0f0f0" stroke="#333" stroke-width="0.5"/>
+  <rect x="166.691157" y="80" width="40.176508" height="20" fill="#d9d9d9" stroke="#333" stroke-width="0.5"/>
+  <rect x="206.867664" y="80" width="52.136407" height="20" fill="#bdbdbd" stroke="#333" stroke-width="0.5"/>
+  <rect x="259.004072" y="80" width="57.857402" height="20" fill="#969696" stroke="#333" stroke-width="0.5"/>
+  <rect x="316.861473" y="80" width="9.593200" height="20" fill="#737373" stroke="#333" stroke-width="0.5"/>
+  <rect x="326.454673" y="80" width="0.154622" height="20" fill="#525252" stroke="#333" stroke-width="0.5"/>
+  <rect x="326.609295" y="80" width="3.656655" height="20" fill="#c6dbef" stroke="#333" stroke-width="0.5"/>
+  <rect x="330.265950" y="80" width="0.020981" height="20" fill="#9ecae1" stroke="#333" stroke-width="0.5"/>
+  <rect x="330.286931" y="80" width="20.149751" height="20" fill="#6baed6" stroke="#333" stroke-width="0.5"/>
+  <rect x="350.436682" y="80" width="0.192478" height="20" fill="#4292c6" stroke="#333" stroke-width="0.5"/>
+  <rect x="350.629160" y="80" width="2.539013" height="20" fill="#2171b5" stroke="#333" stroke-width="0.5"/>
+  <rect x="353.168172" y="80" width="0.164095" height="20" fill="#08519c" stroke="#333" stroke-width="0.5"/>
+  <rect x="353.332268" y="80" width="2.484514" height="20" fill="#fdae6b" stroke="#333" stroke-width="0.5"/>
+
+  <rect x="140.000000" y="120" width="46.024312" height="20" fill="#f0f0f0" stroke="#333" stroke-width="0.5"/>
+  <rect x="186.024312" y="120" width="72.868384" height="20" fill="#d9d9d9" stroke="#333" stroke-width="0.5"/>
+  <rect x="258.892697" y="120" width="84.559486" height="20" fill="#bdbdbd" stroke="#333" stroke-width="0.5"/>
+  <rect x="343.452183" y="120" width="57.879825" height="20" fill="#969696" stroke="#333" stroke-width="0.5"/>
+  <rect x="401.332008" y="120" width="10.920043" height="20" fill="#737373" stroke="#333" stroke-width="0.5"/>
+  <rect x="412.252051" y="120" width="0.665165" height="20" fill="#525252" stroke="#333" stroke-width="0.5"/>
+  <rect x="412.917216" y="120" width="3.658310" height="20" fill="#c6dbef" stroke="#333" stroke-width="0.5"/>
+  <rect x="416.575526" y="120" width="0.020979" height="20" fill="#9ecae1" stroke="#333" stroke-width="0.5"/>
+  <rect x="416.596505" y="120" width="20.013541" height="20" fill="#6baed6" stroke="#333" stroke-width="0.5"/>
+  <rect x="436.610046" y="120" width="0.193717" height="20" fill="#4292c6" stroke="#333" stroke-width="0.5"/>
+  <rect x="436.803763" y="120" width="2.493666" height="20" fill="#2171b5" stroke="#333" stroke-width="0.5"/>
+  <rect x="439.297429" y="120" width="0.323362" height="20" fill="#08519c" stroke="#333" stroke-width="0.5"/>
+  <rect x="439.620791" y="120" width="2.485100" height="20" fill="#fdae6b" stroke="#333" stroke-width="0.5"/>
+
+  <rect x="140.000000" y="160" width="133.690116" height="20" fill="#f0f0f0" stroke="#333" stroke-width="0.5"/>
+  <rect x="273.690116" y="160" width="249.368683" height="20" fill="#d9d9d9" stroke="#333" stroke-width="0.5"/>
+  <rect x="523.058799" y="160" width="254.236500" height="20" fill="#bdbdbd" stroke="#333" stroke-width="0.5"/>
+  <rect x="777.295299" y="160" width="61.861401" height="20" fill="#969696" stroke="#333" stroke-width="0.5"/>
+  <rect x="839.156700" y="160" width="12.342205" height="20" fill="#737373" stroke="#333" stroke-width="0.5"/>
+  <rect x="851.498905" y="160" width="0.719853" height="20" fill="#525252" stroke="#333" stroke-width="0.5"/>
+  <rect x="852.218758" y="160" width="7.275910" height="20" fill="#c6dbef" stroke="#333" stroke-width="0.5"/>
+  <rect x="859.494668" y="160" width="0.021004" height="20" fill="#9ecae1" stroke="#333" stroke-width="0.5"/>
+  <rect x="859.515672" y="160" width="27.412432" height="20" fill="#6baed6" stroke="#333" stroke-width="0.5"/>
+  <rect x="886.928104" y="160" width="9.753953" height="20" fill="#4292c6" stroke="#333" stroke-width="0.5"/>
+  <rect x="896.682057" y="160" width="3.708669" height="20" fill="#2171b5" stroke="#333" stroke-width="0.5"/>
+  <rect x="900.390726" y="160" width="0.320420" height="20" fill="#08519c" stroke="#333" stroke-width="0.5"/>
+  <rect x="900.711146" y="160" width="2.484023" height="20" fill="#fdae6b" stroke="#333" stroke-width="0.5"/>
+
+  <rect x="140.000000" y="200" width="23.898077" height="20" fill="#f0f0f0" stroke="#333" stroke-width="0.5"/>
+  <rect x="163.898077" y="200" width="28.625974" height="20" fill="#d9d9d9" stroke="#333" stroke-width="0.5"/>
+  <rect x="192.524051" y="200" width="32.736408" height="20" fill="#bdbdbd" stroke="#333" stroke-width="0.5"/>
+  <rect x="225.260458" y="200" width="61.882167" height="20" fill="#969696" stroke="#333" stroke-width="0.5"/>
+  <rect x="287.142625" y="200" width="12.720297" height="20" fill="#737373" stroke="#333" stroke-width="0.5"/>
+  <rect x="299.862922" y="200" width="0.079624" height="20" fill="#525252" stroke="#333" stroke-width="0.5"/>
+  <rect x="299.942546" y="200" width="2.420435" height="20" fill="#c6dbef" stroke="#333" stroke-width="0.5"/>
+  <rect x="302.362981" y="200" width="0.021290" height="20" fill="#9ecae1" stroke="#333" stroke-width="0.5"/>
+  <rect x="302.384272" y="200" width="20.226171" height="20" fill="#6baed6" stroke="#333" stroke-width="0.5"/>
+  <rect x="322.610443" y="200" width="0.194059" height="20" fill="#4292c6" stroke="#333" stroke-width="0.5"/>
+  <rect x="322.804502" y="200" width="2.664811" height="20" fill="#2171b5" stroke="#333" stroke-width="0.5"/>
+  <rect x="325.469313" y="200" width="0.326139" height="20" fill="#08519c" stroke="#333" stroke-width="0.5"/>
+  <rect x="325.795452" y="200" width="2.497910" height="20" fill="#fdae6b" stroke="#333" stroke-width="0.5"/>
+
+  <!-- Totals -->
+  <text x="363.775580" y="95" text-anchor="start" font-family="sans-serif" font-size="11">236.83 Mc</text>
+  <text x="450.074256" y="135" text-anchor="start" font-family="sans-serif" font-size="11">331.54 Mc</text>
+  <text x="910.983308" y="175" text-anchor="start" font-family="sans-serif" font-size="11">837.42 Mc</text>
+  <text x="336.274474" y="215" text-anchor="start" font-family="sans-serif" font-size="11">206.64 Mc</text>
+
+  <!-- Axis label -->
+  <text x="550" y="286" text-anchor="middle" font-family="sans-serif" font-size="12">Megacycles (Mc)</text>
+
+  <!-- Legend -->
+  <g font-family="sans-serif" font-size="11">
+    <text x="140" y="320" font-size="12" font-weight="bold">Legend</text>
+
+    <rect x="140" y="336" width="12" height="12" fill="#f0f0f0" stroke="#333"/><text x="158" y="346">BLC.Trees</text>
+    <rect x="413" y="336" width="12" height="12" fill="#d9d9d9" stroke="#333"/><text x="431" y="346">BLC.SeedCommit</text>
+    <rect x="686" y="336" width="12" height="12" fill="#bdbdbd" stroke="#333"/><text x="704" y="346">BLC.PRG</text>
+
+    <rect x="140" y="358" width="12" height="12" fill="#969696" stroke="#333"/><text x="158" y="368">BLC.XOF</text>
+    <rect x="413" y="358" width="12" height="12" fill="#737373" stroke="#333"/><text x="431" y="368">BLC.Arith</text>
+    <rect x="686" y="358" width="12" height="12" fill="#525252" stroke="#333"/><text x="704" y="368">BLC.Open</text>
+
+    <rect x="140" y="392" width="12" height="12" fill="#c6dbef" stroke="#333"/><text x="158" y="402">PIOP.ExpandMQ</text>
+    <rect x="413" y="392" width="12" height="12" fill="#9ecae1" stroke="#333"/><text x="431" y="402">PIOP.ExpandBatch</text>
+    <rect x="686" y="392" width="12" height="12" fill="#6baed6" stroke="#333"/><text x="704" y="402">PIOP.MatMult</text>
+
+    <rect x="140" y="414" width="12" height="12" fill="#4292c6" stroke="#333"/><text x="158" y="424">PIOP.t1</text>
+    <rect x="413" y="414" width="12" height="12" fill="#2171b5" stroke="#333"/><text x="431" y="424">PIOP.P(z,i)</text>
+    <rect x="686" y="414" width="12" height="12" fill="#08519c" stroke="#333"/><text x="704" y="424">PIOP.Batch</text>
+
+    <rect x="140" y="448" width="12" height="12" fill="#fdae6b" stroke="#333"/><text x="158" y="458">PoW</text>
+  </g>
+
+  <text x="140" y="520" font-family="sans-serif" font-size="11" fill="#444">Scale: 0–900 Mc (1 Mc = 0.911111 px). Bars are stacked left-to-right.</text>
+</svg>

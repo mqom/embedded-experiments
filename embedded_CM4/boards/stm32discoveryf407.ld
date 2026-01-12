@@ -1,0 +1,93 @@
+EXTERN(vector_table)
+ENTRY(reset_handler)
+MEMORY
+{
+ rom (rx) : ORIGIN = 0x08000000, LENGTH = 1024K
+ ram (rwx) : ORIGIN = 0x20000000, LENGTH = 128K
+ ccmram (rwx): ORIGIN = 0x10000000, LENGTH = 64K
+}
+SECTIONS
+{
+ .text : {
+  *(.vectors)
+  . = ALIGN(448);
+  *(.text*)
+  . = ALIGN(4);
+  *(.rodata*)
+  . = ALIGN(4);
+  *(.eh_frame)
+ } >rom
+ .preinit_array : {
+  . = ALIGN(4);
+  __preinit_array_start = .;
+  KEEP (*(.preinit_array))
+  __preinit_array_end = .;
+ } >rom
+ .init_array : {
+  . = ALIGN(4);
+  __init_array_start = .;
+  KEEP (*(SORT(.init_array.*)))
+  KEEP (*(.init_array))
+  __init_array_end = .;
+ } >rom
+ .fini_array : {
+  . = ALIGN(4);
+  __fini_array_start = .;
+  KEEP (*(.fini_array))
+  KEEP (*(SORT(.fini_array.*)))
+  __fini_array_end = .;
+ } >rom
+ .ARM.extab : {
+  *(.ARM.extab*)
+ } >rom
+ .ARM.exidx : {
+  __exidx_start = .;
+  *(.ARM.exidx*)
+  __exidx_end = .;
+ } >rom
+ . = ALIGN(4);
+ _etext = .;
+ .data : {
+  _data = .;
+  *(.data*)
+  . = ALIGN(4);
+   _edata = .;
+ } >ram AT >rom
+ .embedded_sram_tables : {
+   _data_sram_tables = .;
+   *(.embedded_sram_tables)
+   . = ALIGN(4);
+   _edata_sram_tables = .;
+ } >ram AT >rom
+
+ /* CCM-RAM section 
+ * 
+ * IMPORTANT NOTE! 
+ * If initialized variables will be placed in this section, 
+ * the startup code needs to be modified to copy the init-values.  
+ */
+ .ccmram :
+ { 
+   . = ALIGN(4);
+   _sccmram = .;       /* create a global symbol at ccmram start */
+   *(.ccmram)
+   *(.ccmram*)    
+   . = ALIGN(4);
+   _eccmram = .;       /* create a global symbol at ccmram end */
+ } >ccmram AT> rom
+ _data_loadaddr = LOADADDR(.data);
+ _data_loadaddr_sram_tables = LOADADDR(.embedded_sram_tables);
+ _siccmram = LOADADDR(.ccmram);
+
+ .bss : {
+  _bss = .;
+  *(.bss*)
+  *(COMMON)
+  . = ALIGN(4);
+  _ebss = .;
+ } >ram
+ end = .;
+ . = ALIGN(4);
+}
+PROVIDE(_stack = ORIGIN(ram) + LENGTH(ram));
+PROVIDE(_embedded_sram_size = SIZEOF(.embedded_sram_tables));
