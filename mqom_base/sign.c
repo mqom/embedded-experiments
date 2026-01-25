@@ -298,17 +298,15 @@ int Verify_default(const uint8_t pk[MQOM2_PK_SIZE], const uint8_t *msg, unsigned
 	field_ext_elt x_eval[MQOM2_PARAM_TAU][FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)];
 
 	/* When possible, we alias the xof context to save stack space */
-	enum { SIZE_OF_xof_context = sizeof(xof_context) };
-	enum { SIZE_OF_field_ext_elt = sizeof(field_ext_elt) };
-#if (MQOM2_PARAM_TAU * FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N) * SIZE_OF_field_ext_elt) >= SIZE_OF_xof_context
-	xof_context *xof_ctx = (xof_context*)x_eval;
-#if defined(USE_ENC_CTX_CLEANSING)
-	memset(xof_ctx, 0, sizeof(xof_context));
-#endif
-#else
-	xof_context DECL_VAR(xof_ctx_);
-	xof_context *xof_ctx = &xof_ctx_;
-#endif
+        xof_context xof_ctx_;
+        xof_context *xof_ctx = NULL;
+        if((MQOM2_PARAM_TAU * FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N) * sizeof(field_ext_elt)) >= sizeof(xof_context)){
+                xof_ctx = (xof_context*)x_eval;
+        }
+        else{
+                xof_ctx = &xof_ctx_;
+        }
+        memset(xof_ctx, 0, sizeof(xof_context));
 
 	/* Parse the public key */
 	memcpy(mseed_eq, &pk[0], 2 * MQOM2_PARAM_SEED_SIZE);
