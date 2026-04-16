@@ -84,8 +84,8 @@ Launching dev environment with USB support
 devuser@67d37673fd15:/home/app# 
 ```
 
-**NOTE:** The container drops you a shell with the ̀ uid/gid` of your user to keep the proper rights on your files. However, depending on your host rights with `/dev/bus/usb`, you might need
-to perform the flashing as `root`. If you encounter a "permission denied" when trying to flash, launch the command again with ̀`sudo` in the container.
+**NOTE:** The container drops you a shell with the uid/gid of your user to keep the proper rights on your files. However, depending on your host rights with `/dev/bus/usb`, you might need
+to perform the flashing as `root`. If you encounter a "permission denied" when trying to flash, launch the command again with `sudo` in the container.
 
 ### Compiling
 
