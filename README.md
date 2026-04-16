@@ -20,6 +20,7 @@ We explain hereafter the various command lines to use for each test to reproduce
 ## Table of Content
 - [Target platforms and required software](#target-platforms-and-required-software)
   - [Target platforms](#target-platforms)
+  - [Easy setup with Docker](#easy-setup-with-docker)
   - [Compiling](#compiling)
   - [Flashing](#flashing)
   - [UART console communication](#uart-console-communication)
@@ -54,6 +55,38 @@ We also support the STMicroeletronics [STM32F4DISCOVERY](https://www.st.com/en/e
 1 MB of flash and 192 KB of SRAM. Regarding the custom board with the AES accelerator, if you have a different board with a STM32F437 check the [Porting to other Cortex-M boards](#porting-to-other-cortex-m-boards) paragraph for insights
 on how to adapt the code.
 
+### Easy setup with Docker
+
+We provide in the [Docker](Docker) folder a `Dockerfile` that embeds the ARM toolchain used for the benchmarks. You must obviously have `docker` installed to use it.
+The purpose of this file is to drop a "dev shell" with all the tool installed so that you can execute compilation (and flashing depending on the host, see below).
+The `Makefile` has two dedicated targets: `make dev-shell` and `make dev-shell-usb`.
+
+When running `make dev-shell`, you should be greeted with a shell like this:
+
+```console
+devuser@ccf10d67c871:/home/app#
+```
+
+where you can run the commands presented in the current repository.
+
+With `make dev-shell-usb`, `docker` will share the USB connection with the development board(s) connected to USB: **beware that this launches Docker in a privileged mode to share USB, use it at your own
+risks**. This allows to flash the boards directly from within the container. Beware that this is only compatible with **Linux hosts** because of the way USB sharing is handled.
+
+```console
+make dev-shell-usb 
+Checking host OS compatibility wit USB sharing...
+WARNING: to share USB, docker will run with '--privileged', use at your own risks.
+Do you still want to continue? [y/N] y
+Building Docker image...
+[+] Building 0.4s (10/10) FINISHED                                                                                                                                                                                                             docker:default
+...
+Launching dev environment with USB support
+devuser@67d37673fd15:/home/app# 
+```
+
+**NOTE:** The container drops you a shell with the ̀ uid/gid` of your user to keep the proper rights on your files. However, depending on your host rights with `/dev/bus/usb`, you might need
+to perform the flashing as `root`. If you encounter a "permission denied" when trying to flash, launch the command again with ̀`sudo` in the container.
+
 ### Compiling
 
 The source code can be compiled for either of the three boards using compilation toggles: `BOARD=nucleol4r5zi` for the Nucleo L4R5ZI board, `BOARD=leia` for the custom STM32F437 board,
@@ -61,8 +94,19 @@ The source code can be compiled for either of the three boards using compilation
 The result of the compilation are two files in the [embedded_CM4/](embedded_CM4/) folder: a `main.elf` ELF file and a `main.bin` file that represents the flat raw binary firmware that is flashed through ST-Link.
 You can use the ELF file for loading the debugging symbols during your `gdb` sessions if needed.
 
-All the results and benchmarks in the article have been obtained with the `arm-none-eabi-gcc` toolchain **in version 14.2.1**. You can fetch it [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads)
-under the tag **14.2.Rel1** (release date December 10, 2024).
+All the results and benchmarks in the article have been obtained with the `arm-none-eabi-gcc` toolchain **from Debian Trixie in version 14.2.1**:
+
+```console
+$ arm-none-eabi-gcc -v
+Using built-in specs.
+COLLECT_GCC=arm-none-eabi-gcc
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/arm-none-eabi/14.2.1/lto-wrapper
+Target: arm-none-eabi
+...
+Thread model: single
+Supported LTO compression algorithms: zlib
+gcc version 14.2.1 20241119 (15:14.2.rel1-1) 
+```
 
 ### Flashing
 

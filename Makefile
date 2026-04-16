@@ -116,6 +116,41 @@ endif
 
 all: objects
 
+IMAGE_NAME = mqom-arm-dev-env
+.PHONY: dev-shell dev-shell-usb
+dev-shell:
+	@echo "Building Docker image..."
+	@docker build -t $(IMAGE_NAME) --build-arg HOST_UID=$$(id -u) --build-arg HOST_GID=$$(id -g) -f Docker/Dockerfile .
+	@echo "Launching dev environment"
+	@docker run -it --rm -v $(PWD):/home/app $(IMAGE_NAME)
+
+dev-shell-usb:
+	@echo "Checking host OS compatibility wit USB sharing..."
+	@if [ "$$(uname -s)" = "Darwin" ]; then \
+		echo "Error: macOS detected, it does not support Docker USB sharing" ; \
+		echo "  Flash from macOS with 'brew install stlink'." ; \
+		exit 1 ; \
+	fi
+	@if uname -r | grep -qiE "microsoft|wsl"; then \
+		echo "Error: Windows (WSL) detected, it does not support Docker USB sharing" ; \
+		echo "  Flash from Windows or use 'usbipd-win'." ; \
+		exit 1 ; \
+	fi
+	@printf "WARNING: to share USB, docker will run with '--privileged', use at your own risks.\nDo you still want to continue? [y/N] " ; \
+	read ans ; \
+	if [ "$$ans" != "y" ] && [ "$$ans" != "Y" ]; then \
+		echo "Aborting..." ; \
+		exit 1 ; \
+	fi
+	@echo "Building Docker image..."
+	@docker build -t $(IMAGE_NAME) --build-arg HOST_UID=$$(id -u) --build-arg HOST_GID=$$(id -g) -f Docker/Dockerfile .
+	@echo "Launching dev environment with USB support"
+	@docker run -it --rm \
+		--privileged \
+		-v /dev/bus/usb:/dev/bus/usb \
+		-v $(PWD):/home/app \
+		$(IMAGE_NAME)
+
 clean:
 	cd mqom_base && make clean
 	cd mqom_verifstream_presign && make clean
