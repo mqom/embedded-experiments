@@ -501,6 +501,8 @@ The resulting benchmarks should be the following:
 
 ★ Performance results rely on LUT use over secret entries.
 
+† Uses hardware acceleration for AES-128 (only on STM32F437).
+
 ## MQOM verification streaming experiments
 
 The verification streaming experiments use the toggle `VERIFY_STREAM_TEST=1`. In order to reproduce the Table for the section "Streaming the signature", one must compile the LUT profile implementation with the
