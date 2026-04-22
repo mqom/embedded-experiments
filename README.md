@@ -47,9 +47,8 @@ We explain hereafter the various command lines to use for each test to reproduce
 ### Target platforms
 
 There are two main platforms targeted here for the article:
-- The STMicroeletronics [Nucleo L4R5ZI](https://www.st.com/en/evaluation-tools/nucleo-l4r5zi.html) featuring a [STM32L4R5ZI](https://www.st.com/en/microcontrollers-microprocessors/stm32l4r5-s5.html)
-MCU with 2 MB of flash and 640 KB of SRAM.
-- A custom board that integrates a [STM32F437](https://www.st.com/en/microcontrollers-microprocessors/stm32f427-437.html) MCU with 2 MB of flash and 256 KB of SRAM, also embedding a CRYP engine with AES hardware acceleration.
+- The STMicroeletronics [Nucleo L4R5ZI](https://www.st.com/en/evaluation-tools/nucleo-l4r5zi.html) featuring a [STM32L4R5ZI](https://www.st.com/en/microcontrollers-microprocessors/stm32l4r5-s5.html) MCU with 2 MB of flash and 640 KB of SRAM.
+- A custom board that integrates a [STM32F437](https://www.st.com/en/microcontrollers-microprocessors/stm32f427-437.html) MCU with 2 MB of flash and 256 KB of SRAM, also embedding a CRYP engine with AES hardware acceleration. The current implementation uses a [LEIA board by H2LAB](https://h2lab.github.io/smartleia.github.io/target.html).
 
 We also support the STMicroeletronics [STM32F4DISCOVERY](https://www.st.com/en/evaluation-tools/stm32f4discovery.html) board that features a [STM32F407](https://www.st.com/en/microcontrollers-microprocessors/stm32f407-417.html) MCU with
 1 MB of flash and 192 KB of SRAM. Regarding the custom board with the AES accelerator, if you have a different board with a STM32F437 check the [Porting to other Cortex-M boards](#porting-to-other-cortex-m-boards) paragraph for insights
