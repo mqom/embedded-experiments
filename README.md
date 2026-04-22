@@ -51,7 +51,7 @@ There are two main platforms targeted here for the article:
 - A custom board that integrates a [STM32F437](https://www.st.com/en/microcontrollers-microprocessors/stm32f427-437.html) MCU with 2 MB of flash and 256 KB of SRAM, also embedding a CRYP engine with AES hardware acceleration. The current implementation uses a [LEIA board by H2LAB](https://h2lab.github.io/smartleia.github.io/target.html).
 
 We also support the STMicroeletronics [STM32F4DISCOVERY](https://www.st.com/en/evaluation-tools/stm32f4discovery.html) board that features a [STM32F407](https://www.st.com/en/microcontrollers-microprocessors/stm32f407-417.html) MCU with
-1 MB of flash and 192 KB of SRAM. Regarding the custom board with the AES accelerator, if you have a different board with a STM32F437 check the [Porting to other Cortex-M boards](#porting-to-other-cortex-m-boards) paragraph for insights
+1 MB of flash and 192 KB of SRAM. Regarding the custom LEIA board with the AES accelerator, if you have a different board with a STM32F437 check the [Porting to other Cortex-M boards](#porting-to-other-cortex-m-boards) paragraph for insights
 on how to adapt the code.
 
 ### Easy setup with Docker
@@ -117,7 +117,8 @@ BOARD=xxx make flash
 ```
 
 A flasher with a [ST-Link chip](https://www.st.com/en/development-tools/st-link-v2.html) that programs the board is of course expected to be plugged in on your PC USB port to perform this (many
-boards such as the Nucleo L4R5ZI or the STM32F4DISCOVERY also contain such chips and can be transformed into flashers for other boards).
+boards such as the Nucleo L4R5ZI or the STM32F4DISCOVERY also contain such chips and can be transformed into flashers for other boards, for the LEIA board you will have to use such an external programmer or adapt
+the flashing method to use the specific DFU mode).
 
 
 ### UART console communication
@@ -125,7 +126,7 @@ boards such as the Nucleo L4R5ZI or the STM32F4DISCOVERY also contain such chips
 When the firmware is flashed, communication is done using the UART protocol with a 38400 baud rate:
 
 - For the Nucleo L4R5ZI, the embedded serial port is used, usually showing up as `/dev/ttyACMx` (with `x` a number) in Linux hosts. 
-- For the custom board, the UART used is `USART1` on the GPIOs `PB6` and `PB7` (see [embedded_CM4/src/hal/hal.h](embedded_CM4/src/hal/hal.h)). You will have to plug a dedicated
+- For the custom LEIA board, the UART used is `USART1` on the GPIOs `PB6` and `PB7` (see [embedded_CM4/src/hal/hal.h](embedded_CM4/src/hal/hal.h)). You will have to plug a dedicated
 TTY serial converter to those pins and to your PC to get the serial console.
 - For the STM32F4DISCOVERY board, the UART used is `USART2` on the GPIOs `PA2` and `PA3` (see [embedded_CM4/src/hal/hal.h](embedded_CM4/src/hal/hal.h)). You will have to plug a dedicated
 TTY serial converter to those pins and to your PC to get the serial console.
