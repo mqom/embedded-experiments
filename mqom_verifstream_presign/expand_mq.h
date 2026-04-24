@@ -9,6 +9,7 @@
 /* Deal with namespacing */
 #define ExpandEquations_memopt_init MQOM_NAMESPACE(ExpandEquations_memopt_init)
 #define ExpandEquations_memopt_update MQOM_NAMESPACE(ExpandEquations_memopt_update)
+#define ExpandEquations_memopt_final MQOM_NAMESPACE(ExpandEquations_memopt_final)
 #define ExpandEquations MQOM_NAMESPACE(ExpandEquations)
 
 /* ExpandEquations context used for the "streaming" API, in order

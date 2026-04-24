@@ -38,43 +38,51 @@
 #define rijndael256_ref_enc_x2_x2 MQOM_NAMESPACE(rijndael256_ref_enc_x2_x2)
 #define rijndael256_ref_enc_x4_x4 MQOM_NAMESPACE(rijndael256_ref_enc_x4_x4)
 #define rijndael256_ref_enc_x8_x8 MQOM_NAMESPACE(rijndael256_ref_enc_x8_x8)
+/**/
+#define aes128_ref_setkey_enc_ecb MQOM_NAMESPACE(aes128_ref_setkey_enc_ecb)
+#define aes256_ref_setkey_enc_ecb MQOM_NAMESPACE(aes256_ref_setkey_enc_ecb)
+#define rijndael256_ref_setkey_enc_ecb MQOM_NAMESPACE(rijndael256_ref_setkey_enc_ecb)
+#define aes128_ref_enc_ecb MQOM_NAMESPACE(aes128_ref_enc_ecb)
+#define aes256_ref_enc_ecb MQOM_NAMESPACE(aes256_ref_enc_ecb)
+#define rijndael256_ref_enc_ecb MQOM_NAMESPACE(rijndael256_ref_enc_ecb)
 
 /* The general Rijndael core context structure */
-typedef struct  __attribute__((packed)) {
+typedef struct {
 	rijndael_type rtype; /* Type of Rijndael */
 	uint32_t Nr; /* Number of rounds */
 	uint32_t Nk; /* Number of words in the key */
 	uint32_t Nb; /* Number of words in the block*/
 	/* Round keys aligned on 4 bytes to avoid unaligned accesses */
 	/* NOTE: alignment to allow uint32_t dereference on platforms where unalignment might be an issue */
-	__attribute__((aligned(4))) uint8_t rk[176];  /* Round keys    */
-}
-rijndael_ref_ctx_aes128;
-typedef struct  __attribute__((packed)) {
+	ALIGN(4) uint8_t rk[176];  /* Round keys    */
+} rijndael_ref_ctx_aes128;
+typedef struct {
 	rijndael_type rtype; /* Type of Rijndael */
 	uint32_t Nr; /* Number of rounds */
 	uint32_t Nk; /* Number of words in the key */
 	uint32_t Nb; /* Number of words in the block*/
 	/* Round keys aligned on 4 bytes to avoid unaligned accesses */
 	/* NOTE: alignment to allow uint32_t dereference on platforms where unalignment might be an issue */
-	__attribute__((aligned(4))) uint8_t rk[240];  /* Round keys    */
-}
-rijndael_ref_ctx_aes256;
-typedef struct  __attribute__((packed)) {
+	ALIGN(4) uint8_t rk[240];  /* Round keys    */
+} rijndael_ref_ctx_aes256;
+typedef struct {
 	rijndael_type rtype; /* Type of Rijndael */
 	uint32_t Nr; /* Number of rounds */
 	uint32_t Nk; /* Number of words in the key */
 	uint32_t Nb; /* Number of words in the block*/
 	/* Round keys aligned on 4 bytes to avoid unaligned accesses */
 	/* NOTE: alignment to allow uint32_t dereference on platforms where unalignment might be an issue */
-	__attribute__((aligned(4))) uint8_t rk[480];  /* Round keys    */
-}
-rijndael_ref_ctx_rijndael256;
+	ALIGN(4) uint8_t rk[480];  /* Round keys    */
+} rijndael_ref_ctx_rijndael256;
 
 /* x2, x4 and x8 contexts */
 MAKE_GENERIC_CTX_XX(aes128, ref)
 MAKE_GENERIC_CTX_XX(aes256, ref)
 MAKE_GENERIC_CTX_XX(rijndael256, ref)
+/* ECB contexts */
+MAKE_GENERIC_CTX_ECB(aes128, ref)
+MAKE_GENERIC_CTX_ECB(aes256, ref)
+MAKE_GENERIC_CTX_ECB(rijndael256, ref)
 
 /* ==== Public API ==== */
 int aes128_ref_setkey_enc(rijndael_ref_ctx_aes128 *ctx, const uint8_t key[16]);
@@ -120,5 +128,9 @@ int rijndael256_ref_enc_x8(const rijndael_ref_ctx_rijndael256 *ctx1, const rijnd
 MAKE_GENERIC_FUNCS_XX_DECL(aes128, ref, 16, 16)
 MAKE_GENERIC_FUNCS_XX_DECL(aes256, ref, 32, 16)
 MAKE_GENERIC_FUNCS_XX_DECL(rijndael256, ref, 32, 32)
+
+MAKE_GENERIC_FUNCS_ECB_DECL(aes128, ref, 16, 16)
+MAKE_GENERIC_FUNCS_ECB_DECL(aes256, ref, 32, 16)
+MAKE_GENERIC_FUNCS_ECB_DECL(rijndael256, ref, 32, 32)
 
 #endif /* __RIJNDAEL_REF_H__ */

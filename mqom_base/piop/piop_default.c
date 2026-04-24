@@ -80,6 +80,7 @@ int ComputePAlpha_default(const uint8_t com[MQOM2_PARAM_DIGEST_SIZE], const fiel
 	ret = xof_update(&xof_ctx, com, MQOM2_PARAM_DIGEST_SIZE);
 	ERR(ret, err);
 	ret = xof_squeeze(&xof_ctx, stream, MQOM2_PARAM_ETA * BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_MQ_M / MQOM2_PARAM_MU));
+	ERR(ret, err);
 	for (i = 0; i < MQOM2_PARAM_ETA; i++) {
 		field_ext_parse(&stream[i * BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_MQ_M / MQOM2_PARAM_MU)], MQOM2_PARAM_MQ_M / MQOM2_PARAM_MU, Gamma[i]);
 	}
@@ -110,7 +111,7 @@ int ComputePAlpha_default(const uint8_t com[MQOM2_PARAM_DIGEST_SIZE], const fiel
 
 	field_ext_elt z0[FIELD_EXT_PACKING(MQOM2_PARAM_MQ_M / MQOM2_PARAM_MU)], z1[FIELD_EXT_PACKING(MQOM2_PARAM_MQ_M / MQOM2_PARAM_MU)];
 	for (e = 0; e < MQOM2_PARAM_TAU; e++) {
-		ret = ComputePz(x0[e], x, A_hat, b_hat, z0, z1, t1_cache);
+		ret = ComputePz(x0[e], x, (const field_ext_elt (*)[MQOM2_PARAM_MQ_N][FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)])A_hat, (const field_ext_elt (*)[FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)])b_hat, z0, z1, t1_cache);
 		ERR(ret, err);
 		__BENCHMARK_START__(BS_PIOP_BATCH_AND_MASK);
 #if MQOM2_PARAM_WITH_STATISTICAL_BATCHING == 1
@@ -190,7 +191,7 @@ int RecomputePAlpha_default(const uint8_t com[MQOM2_PARAM_DIGEST_SIZE], const fi
 
 #if MQOM2_PARAM_WITH_STATISTICAL_BATCHING == 1
 	uint32_t i;
-	xof_context xof_ctx;
+	xof_context DECL_VAR(xof_ctx);
 	field_ext_elt Gamma[MQOM2_PARAM_ETA][FIELD_EXT_PACKING(MQOM2_PARAM_MQ_M / MQOM2_PARAM_MU)];
 	uint8_t stream[MQOM2_PARAM_ETA * BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_MQ_M / MQOM2_PARAM_MU)];
 	ret = xof_init(&xof_ctx);
@@ -200,6 +201,7 @@ int RecomputePAlpha_default(const uint8_t com[MQOM2_PARAM_DIGEST_SIZE], const fi
 	ret = xof_update(&xof_ctx, com, MQOM2_PARAM_DIGEST_SIZE);
 	ERR(ret, err);
 	ret = xof_squeeze(&xof_ctx, stream, MQOM2_PARAM_ETA * BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_MQ_M / MQOM2_PARAM_MU));
+	ERR(ret, err);
 	for (i = 0; i < MQOM2_PARAM_ETA; i++) {
 		field_ext_parse(&stream[i * BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_MQ_M / MQOM2_PARAM_MU)], MQOM2_PARAM_MQ_M / MQOM2_PARAM_MU, Gamma[i]);
 	}
@@ -229,7 +231,7 @@ int RecomputePAlpha_default(const uint8_t com[MQOM2_PARAM_DIGEST_SIZE], const fi
 	field_ext_elt v_alpha[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)];
 	for (e = 0; e < MQOM2_PARAM_TAU; e++) {
 		field_ext_elt r = get_evaluation_point(i_star[e]);
-		ret = ComputePzEval(r, x_eval[e], A_hat, b_hat, y, v_z);
+		ret = ComputePzEval(r, x_eval[e], (const field_ext_elt (*)[MQOM2_PARAM_MQ_N][FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)])A_hat, (const field_ext_elt (*)[FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)])b_hat, y, v_z);
 		ERR(ret, err);
 #if MQOM2_PARAM_WITH_STATISTICAL_BATCHING == 1
 		for (i = 0; i < MQOM2_PARAM_ETA; i++) {

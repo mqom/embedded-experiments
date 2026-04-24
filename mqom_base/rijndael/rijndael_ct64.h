@@ -3,9 +3,7 @@
 
 #include "rijndael_common.h"
 
-#include <stdint.h>
 #include <stdbool.h>
-#include <string.h>
 
 /* Deal with namespacing */
 #define aes128_ct64_setkey_enc MQOM_NAMESPACE(aes128_ct64_setkey_enc)
@@ -42,48 +40,51 @@
 #define rijndael256_ct64_enc_x2_x2 MQOM_NAMESPACE(rijndael256_ct64_enc_x2_x2)
 #define rijndael256_ct64_enc_x4_x4 MQOM_NAMESPACE(rijndael256_ct64_enc_x4_x4)
 #define rijndael256_ct64_enc_x8_x8 MQOM_NAMESPACE(rijndael256_ct64_enc_x8_x8)
+/**/
+#define aes128_ct64_setkey_enc_ecb MQOM_NAMESPACE(aes128_ct64_setkey_enc_ecb)
+#define aes256_ct64_setkey_enc_ecb MQOM_NAMESPACE(aes256_ct64_setkey_enc_ecb)
+#define rijndael256_ct64_setkey_enc_ecb MQOM_NAMESPACE(rijndael256_ct64_setkey_enc_ecb)
+#define aes128_ct64_enc_ecb MQOM_NAMESPACE(aes128_ct64_enc_ecb)
+#define aes256_ct64_enc_ecb MQOM_NAMESPACE(aes256_ct64_enc_ecb)
+#define rijndael256_ct64_enc_ecb MQOM_NAMESPACE(rijndael256_ct64_enc_ecb)
 
 /* The general Rijndael core context structure */
-typedef struct  __attribute__((packed)) {
+typedef struct {
 	rijndael_type rtype; /* Type of Rijndael */
 	uint32_t Nr; /* Number of rounds */
 	uint32_t Nk; /* Number of words in the key */
 	uint32_t Nb; /* Number of words in the block*/
 	/* Round keys aligned on 4 bytes to avoid unaligned accesses */
-	__attribute__((aligned(4))) uint32_t rk[44];  /* Round keys */
-}
-rijndael_ct64_ctx_aes128;
-typedef struct  __attribute__((packed)) {
+	ALIGN(4) uint32_t rk[44];  /* Round keys */
+} rijndael_ct64_ctx_aes128;
+typedef struct {
 	rijndael_type rtype; /* Type of Rijndael */
 	uint32_t Nr; /* Number of rounds */
 	uint32_t Nk; /* Number of words in the key */
 	uint32_t Nb; /* Number of words in the block*/
 	/* Round keys aligned on 4 bytes to avoid unaligned accesses */
-	__attribute__((aligned(4))) uint32_t rk[60];  /* Round keys */
-}
-rijndael_ct64_ctx_aes256;
-typedef struct  __attribute__((packed)) {
+	ALIGN(4) uint32_t rk[60];  /* Round keys */
+} rijndael_ct64_ctx_aes256;
+typedef struct {
 	rijndael_type rtype; /* Type of Rijndael */
 	uint32_t Nr; /* Number of rounds */
 	uint32_t Nk; /* Number of words in the key */
 	uint32_t Nb; /* Number of words in the block*/
 	/* Round keys aligned on 4 bytes to avoid unaligned accesses */
-	__attribute__((aligned(4))) uint32_t rk[120];  /* Round keys */
-}
-rijndael_ct64_ctx_rijndael256;
+	ALIGN(4) uint32_t rk[120];  /* Round keys */
+} rijndael_ct64_ctx_rijndael256;
 
 /* x2, x4 and x8 contexts */
 /*** AES-128 ***/
 #if defined(RIJNDAEL_OPT_ARMV7M)
-typedef struct  __attribute__((packed)) {
+typedef struct {
 	rijndael_type rtype; /* Type of Rijndael */
 	uint32_t Nr; /* Number of rounds */
 	uint32_t Nk; /* Number of words in the key */
 	uint32_t Nb; /* Number of words in the block*/
 	/* Round keys aligned on 4 bytes to avoid unaligned accesses */
-	__attribute__((aligned(4))) uint32_t interleaved_rkeys[2*44]; /* Bitsliced keys */
-}
-rijndael_ct64_ctx_aes128_x2;
+	ALIGN(4) uint32_t interleaved_rkeys[2*44]; /* Bitsliced keys */
+} rijndael_ct64_ctx_aes128_x2;
 typedef struct {
         rijndael_ct64_ctx_aes128_x2 ctx1;
         rijndael_ct64_ctx_aes128_x2 ctx2;
@@ -93,15 +94,14 @@ typedef struct {
         rijndael_ct64_ctx_aes128_x4 ctx2;
 } rijndael_ct64_ctx_aes128_x8;
 #else
-typedef struct  __attribute__((packed)) {
+typedef struct  {
 	rijndael_type rtype; /* Type of Rijndael */
 	uint32_t Nr; /* Number of rounds */
 	uint32_t Nk; /* Number of words in the key */
 	uint32_t Nb; /* Number of words in the block*/
 	/* Round keys aligned on 8 bytes to avoid unaligned accesses */
-	__attribute__((aligned(8))) uint64_t interleaved_rkeys[2*44]; /* Bitsliced keys */
-}
-rijndael_ct64_ctx_aes128_x2;
+	ALIGN(4) uint64_t interleaved_rkeys[2*44]; /* Bitsliced keys */
+} rijndael_ct64_ctx_aes128_x2;
 typedef rijndael_ct64_ctx_aes128_x2 rijndael_ct64_ctx_aes128_x4;
 typedef struct {
 	rijndael_ct64_ctx_aes128_x4 ctx1;
@@ -109,13 +109,13 @@ typedef struct {
 } rijndael_ct64_ctx_aes128_x8;
 #endif
 /*** AES-256 ***/
-typedef struct  __attribute__((packed)) {
+typedef struct {
         rijndael_type rtype; /* Type of Rijndael */
         uint32_t Nr; /* Number of rounds */
         uint32_t Nk; /* Number of words in the key */
         uint32_t Nb; /* Number of words in the block*/
         /* Round keys aligned on 8 bytes to avoid unaligned accesses */
-        __attribute__((aligned(8))) uint64_t interleaved_rkeys[2*60]; /* Bitsliced keys */
+        ALIGN(8) uint64_t interleaved_rkeys[2*60]; /* Bitsliced keys */
 } rijndael_ct64_ctx_aes256_x2;
 typedef rijndael_ct64_ctx_aes256_x2 rijndael_ct64_ctx_aes256_x4;
 typedef struct {
@@ -123,13 +123,13 @@ typedef struct {
 	rijndael_ct64_ctx_aes256_x4 ctx2;
 } rijndael_ct64_ctx_aes256_x8;
 /*** RIJNDAEL-256-256 ***/
-typedef struct  __attribute__((packed)) {
+typedef struct {
         rijndael_type rtype; /* Type of Rijndael */
         uint32_t Nr; /* Number of rounds */
         uint32_t Nk; /* Number of words in the key */
         uint32_t Nb; /* Number of words in the block*/
         /* Round keys aligned on  bytes to avoid unaligned accesses */
-        __attribute__((aligned(8))) uint64_t interleaved_rkeys[120]; /* Bitsliced keys */
+        ALIGN(8) uint64_t interleaved_rkeys[120]; /* Bitsliced keys */
 } rijndael_ct64_ctx_rijndael256_x2;
 typedef struct {
 	rijndael_ct64_ctx_rijndael256_x2 ctx1;
@@ -141,6 +141,18 @@ typedef struct {
 	rijndael_ct64_ctx_rijndael256_x2 ctx3;
 	rijndael_ct64_ctx_rijndael256_x2 ctx4;
 } rijndael_ct64_ctx_rijndael256_x8;
+
+/* ECB contexts */
+/*** AES-128 ***/
+#if defined(RIJNDAEL_OPT_ARMV7M)
+typedef rijndael_ct64_ctx_aes128_x2 rijndael_ct64_ctx_aes128_ecb;
+#else
+typedef rijndael_ct64_ctx_aes128_x4 rijndael_ct64_ctx_aes128_ecb;
+#endif
+/*** AES-256 ***/
+typedef rijndael_ct64_ctx_aes256_x4 rijndael_ct64_ctx_aes256_ecb;
+/*** RIJNDAEL-256-256 ***/
+typedef rijndael_ct64_ctx_rijndael256_x2 rijndael_ct64_ctx_rijndael256_ecb;
 
 /* ==== Public API ==== */
 int aes128_ct64_setkey_enc(rijndael_ct64_ctx_aes128 *ctx, const uint8_t key[16]);
@@ -186,5 +198,9 @@ int rijndael256_ct64_enc_x8(const rijndael_ct64_ctx_rijndael256 *ctx1, const rij
 MAKE_GENERIC_FUNCS_XX_DECL(aes128, ct64, 16, 16)
 MAKE_GENERIC_FUNCS_XX_DECL(aes256, ct64, 32, 16)
 MAKE_GENERIC_FUNCS_XX_DECL(rijndael256, ct64, 32, 32)
+
+MAKE_GENERIC_FUNCS_ECB_DECL(aes128, ct64, 16, 16)
+MAKE_GENERIC_FUNCS_ECB_DECL(aes256, ct64, 32, 16)
+MAKE_GENERIC_FUNCS_ECB_DECL(rijndael256, ct64, 32, 32)
 
 #endif /* __RIJNDAEL_CT64_H__ */

@@ -80,9 +80,15 @@
 
 /* Deal with namespacing */
 #define PRG_memopt MQOM_NAMESPACE(PRG_memopt)
+#define PRG_memopt_pub MQOM_NAMESPACE(PRG_memopt_pub)
 #define PRG MQOM_NAMESPACE(PRG)
+#define PRG_pub MQOM_NAMESPACE(PRG_pub)
+#define PRG_x2 MQOM_NAMESPACE(PRG_x2)
+#define PRG_x2_pub MQOM_NAMESPACE(PRG_x2_pub)
 #define PRG_x4 MQOM_NAMESPACE(PRG_x4)
+#define PRG_x4_pub MQOM_NAMESPACE(PRG_x4_pub)
 #define PRG_x8 MQOM_NAMESPACE(PRG_x8)
+#define PRG_x8_pub MQOM_NAMESPACE(PRG_x8_pub)
 
 int PRG_memopt(const uint8_t salt[MQOM2_PARAM_SALT_SIZE], uint32_t e, const uint8_t seed[MQOM2_PARAM_SEED_SIZE], uint32_t start_nbytes, uint32_t nbytes, uint8_t *out_data, uint8_t in_out_leftover[MQOM2_PARAM_SEED_SIZE], prg_key_sched_cache *cache);
 int PRG_memopt_pub(const uint8_t salt[MQOM2_PARAM_SALT_SIZE], uint32_t e, const uint8_t seed[MQOM2_PARAM_SEED_SIZE], uint32_t start_nbytes, uint32_t nbytes, uint8_t *out_data, uint8_t in_out_leftover[MQOM2_PARAM_SEED_SIZE], prg_key_sched_cache_pub *cache);

@@ -79,6 +79,16 @@
 #define rijndael256_enc_x2_x2 rijndael256_ref_enc_x2_x2
 #define rijndael256_enc_x4_x4 rijndael256_ref_enc_x4_x4
 #define rijndael256_enc_x8_x8 rijndael256_ref_enc_x8_x8
+/**/
+#define rijndael_ctx_aes128_ecb rijndael_ref_ctx_aes128_ecb
+#define rijndael_ctx_aes256_ecb rijndael_ref_ctx_aes256_ecb
+#define rijndael_ctx_rijndael256_ecb rijndael_ref_ctx_rijndael256_ecb
+#define aes128_setkey_enc_ecb aes128_ref_setkey_enc_ecb
+#define aes256_setkey_enc_ecb aes256_ref_setkey_enc_ecb
+#define rijndael256_setkey_enc_ecb rijndael256_ref_setkey_enc_ecb
+#define aes128_enc_ecb aes128_ref_enc_ecb
+#define aes256_enc_ecb aes256_ref_enc_ecb
+#define rijndael256_enc_ecb rijndael256_ref_enc_ecb
 static const char rijndael_conf[] = "Rijndael ref (constant time, slow)";
 /**/
 #if defined(RIJNDAEL_PRIV_PUB_COMMON)
@@ -128,6 +138,16 @@ static const char rijndael_conf[] = "Rijndael ref (constant time, slow)";
 #define rijndael256_enc_x2_pub_x2 rijndael256_enc_x2_x2
 #define rijndael256_enc_x4_pub_x4 rijndael256_enc_x4_x4
 #define rijndael256_enc_x8_pub_x8 rijndael256_enc_x8_x8
+/**/
+#define rijndael_ctx_aes128_pub_ecb rijndael_ctx_aes128_ecb
+#define rijndael_ctx_aes256_pub_ecb rijndael_ctx_aes256_ecb
+#define rijndael_ctx_rijndael256_pub_ecb rijndael_ctx_rijndael256_ecb
+#define aes128_setkey_enc_pub_ecb aes128_setkey_enc_ecb
+#define aes256_setkey_enc_pub_ecb aes256_setkey_enc_ecb
+#define rijndael256_setkey_enc_pub_ecb rijndael256_setkey_enc_ecb
+#define aes128_enc_pub_ecb aes128_enc_ecb
+#define aes256_enc_pub_ecb aes256_enc_ecb
+#define rijndael256_enc_pub_ecb rijndael256_enc_ecb
 static const char rijndael_conf_pub[] = "Rijndael pub ref";
 #else
 #include "rijndael_table.h"
@@ -177,6 +197,16 @@ static const char rijndael_conf_pub[] = "Rijndael pub ref";
 #define rijndael256_enc_x2_pub_x2 rijndael256_table_enc_x2_x2
 #define rijndael256_enc_x4_pub_x4 rijndael256_table_enc_x4_x4
 #define rijndael256_enc_x8_pub_x8 rijndael256_table_enc_x8_x8
+/**/
+#define rijndael_ctx_aes128_pub_ecb rijndael_table_ctx_aes128_ecb
+#define rijndael_ctx_aes256_pub_ecb rijndael_table_ctx_aes256_ecb
+#define rijndael_ctx_rijndael256_pub_ecb rijndael_table_ctx_rijndael256_ecb
+#define aes128_setkey_enc_pub_ecb aes128_table_setkey_enc_ecb
+#define aes256_setkey_enc_pub_ecb aes256_table_setkey_enc_ecb
+#define rijndael256_setkey_enc_pub_ecb rijndael256_table_setkey_enc_ecb
+#define aes128_enc_pub_ecb aes128_table_enc_ecb
+#define aes256_enc_pub_ecb aes256_table_enc_ecb
+#define rijndael256_enc_pub_ecb rijndael256_table_enc_ecb
 static const char rijndael_conf_pub[] = "Rijndael pub table";
 #endif
 #endif
@@ -230,6 +260,16 @@ static const char rijndael_conf_pub[] = "Rijndael pub table";
 #define rijndael256_enc_x2_x2 rijndael256_ct64_enc_x2_x2
 #define rijndael256_enc_x4_x4 rijndael256_ct64_enc_x4_x4
 #define rijndael256_enc_x8_x8 rijndael256_ct64_enc_x8_x8
+/**/
+#define rijndael_ctx_aes128_ecb rijndael_ct64_ctx_aes128_ecb
+#define rijndael_ctx_aes256_ecb rijndael_ct64_ctx_aes256_ecb
+#define rijndael_ctx_rijndael256_ecb rijndael_ct64_ctx_rijndael256_ecb
+#define aes128_setkey_enc_ecb aes128_ct64_setkey_enc_ecb
+#define aes256_setkey_enc_ecb aes256_ct64_setkey_enc_ecb
+#define rijndael256_setkey_enc_ecb rijndael256_ct64_setkey_enc_ecb
+#define aes128_enc_ecb aes128_ct64_enc_ecb
+#define aes256_enc_ecb aes256_ct64_enc_ecb
+#define rijndael256_enc_ecb rijndael256_ct64_enc_ecb
 #if defined(RIJNDAEL_OPT_ARMV7M)
 static const char rijndael_conf[] = "Rijndael bitslice (constant time) (Variant ASM optimized for ARMv7M micro-architecture)";
 #else
@@ -283,6 +323,16 @@ static const char rijndael_conf[] = "Rijndael bitslice (constant time) (pure C)"
 #define rijndael256_enc_x2_pub_x2 rijndael256_enc_x2_x2
 #define rijndael256_enc_x4_pub_x4 rijndael256_enc_x4_x4
 #define rijndael256_enc_x8_pub_x8 rijndael256_enc_x8_x8
+/**/
+#define rijndael_ctx_aes128_pub_ecb rijndael_ctx_aes128_ecb
+#define rijndael_ctx_aes256_pub_ecb rijndael_ctx_aes256_ecb
+#define rijndael_ctx_rijndael256_pub_ecb rijndael_ctx_rijndael256_ecb
+#define aes128_setkey_enc_pub_ecb aes128_setkey_enc_ecb
+#define aes256_setkey_enc_pub_ecb aes256_setkey_enc_ecb
+#define rijndael256_setkey_enc_pub_ecb rijndael256_setkey_enc_ecb
+#define aes128_enc_pub_ecb aes128_enc_ecb
+#define aes256_enc_pub_ecb aes256_enc_ecb
+#define rijndael256_enc_pub_ecb rijndael256_enc_ecb
 static const char rijndael_conf_pub[] = "Rijndael pub bitslice";
 #else
 #include "rijndael_table.h"
@@ -332,6 +382,16 @@ static const char rijndael_conf_pub[] = "Rijndael pub bitslice";
 #define rijndael256_enc_x2_pub_x2 rijndael256_table_enc_x2_x2
 #define rijndael256_enc_x4_pub_x4 rijndael256_table_enc_x4_x4
 #define rijndael256_enc_x8_pub_x8 rijndael256_table_enc_x8_x8
+/**/
+#define rijndael_ctx_aes128_pub_ecb rijndael_table_ctx_aes128_ecb
+#define rijndael_ctx_aes256_pub_ecb rijndael_table_ctx_aes256_ecb
+#define rijndael_ctx_rijndael256_pub_ecb rijndael_table_ctx_rijndael256_ecb
+#define aes128_setkey_enc_pub_ecb aes128_table_setkey_enc_ecb
+#define aes256_setkey_enc_pub_ecb aes256_table_setkey_enc_ecb
+#define rijndael256_setkey_enc_pub_ecb rijndael256_table_setkey_enc_ecb
+#define aes128_enc_pub_ecb aes128_table_enc_ecb
+#define aes256_enc_pub_ecb aes256_table_enc_ecb
+#define rijndael256_enc_pub_ecb rijndael256_table_enc_ecb
 static const char rijndael_conf_pub[] = "Rijndael pub table";
 #endif
 #endif
@@ -385,6 +445,16 @@ static const char rijndael_conf_pub[] = "Rijndael pub table";
 #define rijndael256_enc_x2_x2 rijndael256_table_enc_x2_x2
 #define rijndael256_enc_x4_x4 rijndael256_table_enc_x4_x4
 #define rijndael256_enc_x8_x8 rijndael256_table_enc_x8_x8
+/**/
+#define rijndael_ctx_aes128_ecb rijndael_table_ctx_aes128_ecb
+#define rijndael_ctx_aes256_ecb rijndael_table_ctx_aes256_ecb
+#define rijndael_ctx_rijndael256_ecb rijndael_table_ctx_rijndael256_ecb
+#define aes128_setkey_enc_ecb aes128_table_setkey_enc_ecb
+#define aes256_setkey_enc_ecb aes256_table_setkey_enc_ecb
+#define rijndael256_setkey_enc_ecb rijndael256_table_setkey_enc_ecb
+#define aes128_enc_ecb aes128_table_enc_ecb
+#define aes256_enc_ecb aes256_table_enc_ecb
+#define rijndael256_enc_ecb rijndael256_table_enc_ecb
 #if defined(RIJNDAEL_OPT_ARMV7M)
 static const char rijndael_conf[] = "Rijndael table (usually NON constant time, constant time on embedded platforms without cache to SRAM) (Variant ASM optimized for ARMv7M micro-architecture)";
 #else
@@ -437,6 +507,16 @@ static const char rijndael_conf[] = "Rijndael table (usually NON constant time, 
 #define rijndael256_enc_x2_pub_x2 rijndael256_table_enc_x2_x2
 #define rijndael256_enc_x4_pub_x4 rijndael256_table_enc_x4_x4
 #define rijndael256_enc_x8_pub_x8 rijndael256_table_enc_x8_x8
+/**/
+#define rijndael_ctx_aes128_pub_ecb rijndael_table_ctx_aes128_ecb
+#define rijndael_ctx_aes256_pub_ecb rijndael_table_ctx_aes256_ecb
+#define rijndael_ctx_rijndael256_pub_ecb rijndael_table_ctx_rijndael256_ecb
+#define aes128_setkey_enc_pub_ecb aes128_table_setkey_enc_ecb
+#define aes256_setkey_enc_pub_ecb aes256_table_setkey_enc_ecb
+#define rijndael256_setkey_enc_pub_ecb rijndael256_table_setkey_enc_ecb
+#define aes128_enc_pub_ecb aes128_table_enc_ecb
+#define aes256_enc_pub_ecb aes256_table_enc_ecb
+#define rijndael256_enc_pub_ecb rijndael256_table_enc_ecb
 static const char rijndael_conf_pub[] = "Rijndael pub table";
 #endif
 
@@ -489,6 +569,16 @@ static const char rijndael_conf_pub[] = "Rijndael pub table";
 #define rijndael256_enc_x2_x2 rijndael256_aes_ni_enc_x2_x2
 #define rijndael256_enc_x4_x4 rijndael256_aes_ni_enc_x4_x4
 #define rijndael256_enc_x8_x8 rijndael256_aes_ni_enc_x8_x8
+/**/
+#define rijndael_ctx_aes128_ecb rijndael_aes_ni_ctx_aes128_ecb
+#define rijndael_ctx_aes256_ecb rijndael_aes_ni_ctx_aes256_ecb
+#define rijndael_ctx_rijndael256_ecb rijndael_aes_ni_ctx_rijndael256_ecb
+#define aes128_setkey_enc_ecb aes128_aes_ni_setkey_enc_ecb
+#define aes256_setkey_enc_ecb aes256_aes_ni_setkey_enc_ecb
+#define rijndael256_setkey_enc_ecb rijndael256_aes_ni_setkey_enc_ecb
+#define aes128_enc_ecb aes128_aes_ni_enc_ecb
+#define aes256_enc_ecb aes256_aes_ni_enc_ecb
+#define rijndael256_enc_ecb rijndael256_aes_ni_enc_ecb
 static const char rijndael_conf[] = "Rijndael AES-NI (constant time, x86 dedicated)";
 /**/
 #define rijndael_ctx_aes128_pub rijndael_aes_ni_ctx_aes128
@@ -537,6 +627,16 @@ static const char rijndael_conf[] = "Rijndael AES-NI (constant time, x86 dedicat
 #define rijndael256_enc_x2_pub_x2 rijndael256_enc_x2_x2
 #define rijndael256_enc_x4_pub_x4 rijndael256_enc_x4_x4
 #define rijndael256_enc_x8_pub_x8 rijndael256_enc_x8_x8
+/**/
+#define rijndael_ctx_aes128_pub_ecb rijndael_ctx_aes128_ecb
+#define rijndael_ctx_aes256_pub_ecb rijndael_ctx_aes256_ecb
+#define rijndael_ctx_rijndael256_pub_ecb rijndael_ctx_rijndael256_ecb
+#define aes128_setkey_enc_pub_ecb aes128_setkey_enc_ecb
+#define aes256_setkey_enc_pub_ecb aes256_setkey_enc_ecb
+#define rijndael256_setkey_enc_pub_ecb rijndael256_setkey_enc_ecb
+#define aes128_enc_pub_ecb aes128_enc_ecb
+#define aes256_enc_pub_ecb aes256_enc_ecb
+#define rijndael256_enc_pub_ecb rijndael256_enc_ecb
 static const char rijndael_conf_pub[] = "Rijndael pub aes_ni";
 #endif
 
@@ -589,6 +689,16 @@ static const char rijndael_conf_pub[] = "Rijndael pub aes_ni";
 #define rijndael256_enc_x2_x2 rijndael256_external_enc_x2_x2
 #define rijndael256_enc_x4_x4 rijndael256_external_enc_x4_x4
 #define rijndael256_enc_x8_x8 rijndael256_external_enc_x8_x8
+/**/
+#define rijndael_ctx_aes128_ecb rijndael_external_ctx_aes128_ecb
+#define rijndael_ctx_aes256_ecb rijndael_external_ctx_aes256_ecb
+#define rijndael_ctx_rijndael256_ecb rijndael_external_ctx_rijndael256_ecb
+#define aes128_setkey_enc_ecb aes128_external_setkey_enc_ecb
+#define aes256_setkey_enc_ecb aes256_external_setkey_enc_ecb
+#define rijndael256_setkey_enc_ecb rijndael256_external_setkey_enc_ecb
+#define aes128_enc_ecb aes128_external_enc_ecb
+#define aes256_enc_ecb aes256_external_enc_ecb
+#define rijndael256_enc_ecb rijndael256_external_enc_ecb
 static const char rijndael_conf[] = "Rijndael external (user provided)";
 /**/
 #define rijndael_ctx_aes128_pub rijndael_ctx_aes128
@@ -637,6 +747,16 @@ static const char rijndael_conf[] = "Rijndael external (user provided)";
 #define rijndael256_enc_x2_pub_x2 rijndael256_enc_x2_x2
 #define rijndael256_enc_x4_pub_x4 rijndael256_enc_x4_x4
 #define rijndael256_enc_x8_pub_x8 rijndael256_enc_x8_x8
+/**/
+#define rijndael_ctx_aes128_pub_ecb rijndael_ctx_aes128_ecb
+#define rijndael_ctx_aes256_pub_ecb rijndael_ctx_aes256_ecb
+#define rijndael_ctx_rijndael256_pub_ecb rijndael_ctx_rijndael256_ecb
+#define aes128_setkey_enc_pub_ecb aes128_setkey_enc_ecb
+#define aes256_setkey_enc_pub_ecb aes256_setkey_enc_ecb
+#define rijndael256_setkey_enc_pub_ecb rijndael256_setkey_enc_ecb
+#define aes128_enc_pub_ecb aes128_enc_ecb
+#define aes256_enc_pub_ecb aes256_enc_ecb
+#define rijndael256_enc_pub_ecb rijndael256_enc_ecb
 static const char rijndael_conf_pub[] = "Rijndael pub external (user provided)";
 #endif
 
@@ -803,5 +923,20 @@ int rijndael256_enc_x8_pub_x8(const rijndael_ctx_rijndael256_pub_x8 *ctx,
                       const uint8_t plainText5[32], const uint8_t plainText6[32], const uint8_t plainText7[32], const uint8_t plainText8[32],
                       uint8_t cipherText1[32], uint8_t cipherText2[32], uint8_t cipherText3[32], uint8_t cipherText4[32],
                       uint8_t cipherText5[32], uint8_t cipherText6[32], uint8_t cipherText7[32], uint8_t cipherText8[32]);
+
+/* Multiple blocks encryption (under the same key) APIs */
+int aes128_setkey_enc_ecb(rijndael_ctx_aes128_ecb *ctx, const uint8_t key[16]);
+int aes256_setkey_enc_ecb(rijndael_ctx_aes256_ecb *ctx, const uint8_t key[32]);
+int rijndael256_setkey_enc_ecb(rijndael_ctx_rijndael256_ecb *ctx, const uint8_t key[32]);
+int aes128_setkey_enc_pub_ecb(rijndael_ctx_aes128_pub_ecb *ctx, const uint8_t key[16]);
+int aes256_setkey_enc_pub_ecb(rijndael_ctx_aes256_pub_ecb *ctx, const uint8_t key[32]);
+int rijndael256_setkey_enc_pub_ecb(rijndael_ctx_rijndael256_pub_ecb *ctx, const uint8_t key[32]);
+/**/
+int aes128_enc_ecb(const rijndael_ctx_aes128_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out);
+int aes256_enc_ecb(const rijndael_ctx_aes256_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out);
+int rijndael256_enc_ecb(const rijndael_ctx_rijndael256_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out);
+int aes128_enc_pub_ecb(const rijndael_ctx_aes128_pub_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out);
+int aes256_enc_pub_ecb(const rijndael_ctx_aes256_pub_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out);
+int rijndael256_enc_pub_ecb(const rijndael_ctx_rijndael256_pub_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out);
 
 #endif /* __RIJNDAEL_H__ */

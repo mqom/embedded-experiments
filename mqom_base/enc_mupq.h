@@ -180,8 +180,8 @@ static inline int enc_key_sched_x8(enc_ctx_x8 *ctx, const uint8_t key1[16], cons
 }
 static inline int enc_key_sched_pub_x2(enc_ctx_pub_x2 *ctx, const uint8_t key1[16], const uint8_t key2[16]) {
 	int ret;
-	ret  = enc_key_sched(&ctx->ctx1, key1);
-	ret |= enc_key_sched(&ctx->ctx2, key2);
+	ret  = enc_key_sched_pub(&ctx->ctx1, key1);
+	ret |= enc_key_sched_pub(&ctx->ctx2, key2);
 	return ret;
 }
 static inline int enc_key_sched_pub_x4(enc_ctx_pub_x4 *ctx, const uint8_t key1[16], const uint8_t key2[16], const uint8_t key3[16], const uint8_t key4[16]) {
@@ -213,7 +213,7 @@ static inline int enc_encrypt(const enc_ctx *ctx, const uint8_t pt[16], uint8_t 
 	return 0;
 }
 static inline int enc_encrypt_pub(const enc_ctx_pub *ctx, const uint8_t pt[16], uint8_t ct[16]) {
-	aes128_ecb_publicinput(ct, pt, 1, ctx);
+	aes128_ecb_publicinputs(ct, pt, 1, ctx);
 	return 0;
 }
 
@@ -266,13 +266,13 @@ static inline int enc_encrypt_x2_pub(const enc_ctx_pub *ctx1, const enc_ctx_pub 
 		memcpy(&pt[0], pt1, 16);
 		memcpy(&pt[16], pt2, 16);
 
-		aes128_ecb_publicinput(ct, pt, 2, ctx1);
+		aes128_ecb_publicinputs(ct, pt, 2, ctx1);
 
 		memcpy(ct1, &ct[0], 16);
 		memcpy(ct2, &ct[16], 16);
 	} else {
-		aes128_ecb_publicinput(ct1, pt1, 1, ctx1);
-		aes128_ecb_publicinput(ct2, pt2, 1, ctx2);
+		aes128_ecb_publicinputs(ct1, pt1, 1, ctx1);
+		aes128_ecb_publicinputs(ct2, pt2, 1, ctx2);
 	}
 
 	return 0;
@@ -334,7 +334,7 @@ static inline int enc_encrypt_x4_pub(const enc_ctx_pub *ctx1, const enc_ctx_pub 
 		memcpy(&pt[32], pt3, 16);
 		memcpy(&pt[48], pt4, 16);
 
-		aes128_ecb_publicinput(ct, pt, 4, ctx1);
+		aes128_ecb_publicinputs(ct, pt, 4, ctx1);
 
 		memcpy(ct1, &ct[0], 16);
 		memcpy(ct2, &ct[16], 16);
@@ -422,7 +422,7 @@ static inline int enc_encrypt_x8_pub(const enc_ctx_pub *ctx1, const enc_ctx_pub 
 		memcpy(&pt[96],  pt7, 16);
 		memcpy(&pt[112], pt8, 16);
 
-		aes128_ecb_publicinput(ct, pt, 8, ctx1);
+		aes128_ecb_publicinputs(ct, pt, 8, ctx1);
 
 		memcpy(ct1, &ct[0],  16);
 		memcpy(ct2, &ct[16],  16);

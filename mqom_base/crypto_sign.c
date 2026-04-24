@@ -1,4 +1,9 @@
+#ifdef SUPERCOP
+#include "crypto_sign.h"
+#include "crypto_declassify.h"
+#else
 #include "api.h"
+#endif
 
 #include "sign.h"
 
@@ -37,11 +42,17 @@ crypto_sign_signature(unsigned char  *sig, size_t *siglen,
 #endif
 	// Sample salt
 	uint8_t salt[MQOM2_PARAM_SALT_SIZE];
+
 #if defined(SUPERCOP) || defined(MQOM2_FOR_LIBOQS)
 	randombytes(salt, MQOM2_PARAM_SALT_SIZE);
 #else
 	ret = randombytes(salt, MQOM2_PARAM_SALT_SIZE);
 	ERR(ret, err);
+#endif
+
+#ifdef SUPERCOP
+        /* Salt declassification (as it is public) for SUPERCOP */
+        crypto_declassify(salt, MQOM2_PARAM_SALT_SIZE);
 #endif
 
 	// Build the signature

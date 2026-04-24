@@ -765,6 +765,7 @@ int PRG_x2(const uint8_t salt[MQOM2_PARAM_SALT_SIZE], const uint32_t* e, const u
 	if (remaining_bytes) {
 		uint8_t leftover[2][MQOM2_PARAM_SEED_SIZE];
 		ret = prg_key_sched_x2(salt, es, i, &ctx_x2, cache);
+		ERR(ret, err);
 		ret = enc_encrypt_x2_x2(&ctx_x2, seed[0], seed[1],
 		                     leftover[0], leftover[1]);
 		ERR(ret, err);

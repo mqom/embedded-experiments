@@ -1379,6 +1379,10 @@ MAKE_GENERIC_FUNCS_XX_IMPL(aes128, aes_ni, 16, 16)
 MAKE_GENERIC_FUNCS_XX_IMPL(aes256, aes_ni, 32, 16)
 MAKE_GENERIC_FUNCS_XX_IMPL(rijndael256, aes_ni, 32, 32)
 
+MAKE_GENERIC_FUNCS_ECB_IMPL(aes128, aes_ni, 16, 16)
+MAKE_GENERIC_FUNCS_ECB_IMPL(aes256, aes_ni, 32, 16)
+MAKE_GENERIC_FUNCS_ECB_IMPL(rijndael256, aes_ni, 32, 32)
+
 #else /* !RIJNDAEL_AES_NI */
 /*
  * Dummy definition to avoid the empty translation unit ISO C warning

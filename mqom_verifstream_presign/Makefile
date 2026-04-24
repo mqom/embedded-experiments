@@ -46,6 +46,14 @@ RIJNDAEL_OBJS   = $(patsubst %.c,%.o, $(filter %.c,$(RIJNDAEL_SRC_FILES)))
 RIJNDAEL_OBJS  += $(patsubst %.s,%.o, $(filter %.s,$(RIJNDAEL_SRC_FILES)))
 RIJNDAEL_OBJS  += $(patsubst %.S,%.o, $(filter %.S,$(RIJNDAEL_SRC_FILES)))
 
+# GGMTree related stuff
+GGM_DIR = ggm_tree
+GGM_INCLUDES = $(GGM_DIR)
+GGM_SRC_FILES = $(GGM_DIR)/ggm_tree.c $(GGM_DIR)/ggm_tree_incr_x1_base.c $(GGM_DIR)/ggm_tree_incr_x2.c $(GGM_DIR)/ggm_tree_incr_x4.c $(GGM_DIR)/ggm_tree_incr_x1_adv.c $(GGM_DIR)/ggm_tree_incr_batch.c
+GGM_OBJS   = $(patsubst %.c,%.o, $(filter %.c,$(GGM_SRC_FILES)))
+GGM_OBJS  += $(patsubst %.s,%.o, $(filter %.s,$(GGM_SRC_FILES)))
+GGM_OBJS  += $(patsubst %.S,%.o, $(filter %.S,$(GGM_SRC_FILES)))
+
 # BLC related stuff
 BLC_DIR = blc
 BLC_INCLUDES = $(BLC_DIR)
@@ -71,7 +79,7 @@ FIELDS_INCLUDES = $(FIELDS_DIR) $(FIELDS_BITSLICE_DIR)
 # MQOM2 related elements
 MQOM2_DIR = .
 MQOM2_INCLUDES = $(MQOM2_DIR)
-MQOM2_SRC_FILES = $(MQOM2_DIR)/xof.c $(MQOM2_DIR)/prg.c $(MQOM2_DIR)/ggm_tree.c $(MQOM2_DIR)/expand_mq.c $(MQOM2_DIR)/keygen.c $(MQOM2_DIR)/sign.c $(MQOM2_DIR)/sign_memopt.c $(MQOM2_DIR)/crypto_sign.c $(MQOM2_DIR)/sign-pre.c $(MQOM2_DIR)/verify-stream.c
+MQOM2_SRC_FILES = $(MQOM2_DIR)/xof.c $(MQOM2_DIR)/prg.c $(MQOM2_DIR)/expand_mq.c $(MQOM2_DIR)/keygen.c $(MQOM2_DIR)/sign.c $(MQOM2_DIR)/sign_memopt.c $(MQOM2_DIR)/crypto_sign.c $(MQOM2_DIR)/sign-pre.c $(MQOM2_DIR)/verify-stream.c
 MQOM2_OBJS   = $(patsubst %.c,%.o, $(filter %.c,$(MQOM2_SRC_FILES)))
 MQOM2_OBJS  += $(patsubst %.s,%.o, $(filter %.s,$(MQOM2_SRC_FILES)))
 MQOM2_OBJS  += $(patsubst %.S,%.o, $(filter %.S,$(MQOM2_SRC_FILES)))
@@ -81,7 +89,7 @@ EXTRA_OBJS  =$(patsubst %.c,%.o, $(filter %.c,$(EXTRA_SRC)))
 EXTRA_OBJS +=$(patsubst %.s,%.o, $(filter %.s,$(EXTRA_SRC)))
 EXTRA_OBJS +=$(patsubst %.S,%.o, $(filter %.S,$(EXTRA_SRC)))
 
-OBJS = $(RIJNDAEL_OBJS) $(BLC_OBJS) $(PIOP_OBJS) $(MQOM2_OBJS) $(EXTRA_OBJS)
+OBJS = $(RIJNDAEL_OBJS) $(GGM_OBJS) $(BLC_OBJS) $(PIOP_OBJS) $(MQOM2_OBJS) $(EXTRA_OBJS)
 
 ifneq ($(GCC),)
   # Remove gcc's -Warray-bounds and -W-stringop-overflow/-W-stringop-overread as they give many false positives
@@ -120,6 +128,14 @@ ifeq ($(RIJNDAEL_EXTERNAL),1)
   CFLAGS += -DRIJNDAEL_EXTERNAL
 endif
 
+## For fields, we detect if we are on a 64 bit __x86_64__: if this is not the case (32 bits)
+## our implementation does not support it (because some intrinsics specifically use 64 bits registers)
+DETECT_PLATFORM_X64=$(shell $(CC) $(CFLAGS) $(EXTRA_CFLAGS) -dM -E - < /dev/null 2> /dev/null |egrep __x86_64__)
+ifeq ($(DETECT_PLATFORM_X64),)
+  # On non-x86 and 32 bits x86 platforms, fallback on fields ref
+  FIELDS_REF = 1
+endif
+#
 ifeq ($(FIELDS_REF),1)
   # Reference implementation for fields
   CFLAGS += -DFIELDS_REF
@@ -217,6 +233,26 @@ endif
 ifneq ($(GGMTREE_NB_ENC_CTX_IN_MEMORY),)
   CFLAGS += -DGGMTREE_NB_ENC_CTX_IN_MEMORY=$(GGMTREE_NB_ENC_CTX_IN_MEMORY)
 endif
+ifeq ($(GGM_TREE_NO_BATCHING),1)
+  CFLAGS += -DGGM_TREE_NO_BATCHING
+endif
+ifneq ($(BLC_NB_LEAF_SEEDS_IN_PARALLEL),)
+  CFLAGS += -DBLC_NB_LEAF_SEEDS_IN_PARALLEL=$(BLC_NB_LEAF_SEEDS_IN_PARALLEL)
+endif
+ifneq ($(GGMTREE_NB_PARALLEL_DERIVATIONS_LOG),)
+  CFLAGS += -DGGMTREE_NB_PARALLEL_DERIVATIONS_LOG=$(GGMTREE_NB_PARALLEL_DERIVATIONS_LOG)
+endif
+ifneq ($(GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG),)
+  CFLAGS += -DGGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=$(GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG)
+endif
+ifeq ($(BLC_SEEDEXPAND_CACHE),1)
+  CFLAGS += -DBLC_SEEDEXPAND_CACHE
+endif
+ifeq ($(BLC_SEEDCOMMIT_CACHE),1)
+  CFLAGS += -DBLC_SEEDCOMMIT_CACHE
+endif
+
+
 # Activate optimizing memory for PIOP
 ifeq ($(MEMORY_EFFICIENT_PIOP),1)
   CFLAGS += -DMEMORY_EFFICIENT_PIOP
@@ -253,6 +289,9 @@ ifeq ($(WITH_LOW_POW),1)
   CFLAGS += -DWITH_LOW_POW
 endif
 
+ifneq ($(BITSLICE_HYBDID_LEFTOVER_LIMIT),)
+  CFLAGS += -DBITSLICE_HYBDID_LEFTOVER_LIMIT=$(BITSLICE_HYBDID_LEFTOVER_LIMIT)
+endif
 
 ifneq ($(USE_ENC_X8),0)
   CFLAGS += -DUSE_ENC_X8
@@ -305,6 +344,11 @@ ifeq ($(FORCE_PLATFORM_AVX512_GFNI),1)
   CFLAGS += -maes -mgfni -mavx512bw -mavx512f -mavx512vl -mavx512vpopcntdq -mavx512vbmi
 endif
 
+# Externally provided XOF functions
+ifeq ($(MQOM2_XOF_EXTERNAL_API),1)
+  CFLAGS += -DMQOM2_XOF_EXTERNAL_API
+endif
+
 ## Togles for various analysis and other useful stuff
 # Static analysis of gcc
 ifeq ($(FANALYZER),1)
@@ -348,13 +392,24 @@ endif
 ifeq ($(KECCAK_PLATFORM),)
   KECCAK_DETECT_PLATFORM_AVX512VL=$(shell $(CC) $(CFLAGS) $(EXTRA_CFLAGS) -dM -E - < /dev/null 2> /dev/null |egrep AVX512VL)
   KECCAK_DETECT_PLATFORM_AVX512F=$(shell $(CC) $(CFLAGS) $(EXTRA_CFLAGS) -dM -E - < /dev/null 2> /dev/null |egrep AVX512F)
-  KECCAK_DETECT_PLATFORM_AVX2=$(shell $(CC) $(CFLAGS) $(EXTRA_CFLAGS) -dM -E - < /dev/null 2> /dev/null |egrep AVX2)
+  KECCAK_DETECT_PLATFORM_SUB_AVX2=$(shell $(CC) $(CFLAGS) $(EXTRA_CFLAGS) -dM -E - < /dev/null 2> /dev/null |egrep AVX2)
+  KECCAK_DETECT_PLATFORM_X64=$(shell $(CC) $(CFLAGS) $(EXTRA_CFLAGS) -dM -E - < /dev/null 2> /dev/null |egrep __x86_64__)
   KECCAK_DETECT_PLATFORM_AVX512=
-  ifneq ($(KECCAK_DETECT_PLATFORM_AVX512VL),)
-    ifneq ($(KECCAK_DETECT_PLATFORM_AVX512F),)
+  # NOTE: we detect __x86_64__ as our Keccak implementation specifically uses 64 bit registers in assembly
+  # (while x86 32 bit platforms might support AVX2 or AVX-512)
+  ifneq ($(KECCAK_DETECT_PLATFORM_X64),)
+    ifneq ($(KECCAK_DETECT_PLATFORM_AVX512VL),)
+      ifneq ($(KECCAK_DETECT_PLATFORM_AVX512F),)
         KECCAK_DETECT_PLATFORM_AVX512=1
+      endif
     endif
   endif
+  ifneq ($(KECCAK_DETECT_PLATFORM_X64),)
+    ifneq ($(KECCAK_DETECT_PLATFORM_SUB_AVX2),)
+        KECCAK_DETECT_PLATFORM_AVX2=1
+    endif
+  endif
+  #
   ifneq ($(KECCAK_DETECT_PLATFORM_AVX512),)
       KECCAK_PLATFORM=avx512
   else
@@ -372,12 +427,14 @@ ifeq ($(KECCAK_PLATFORM),)
     endif
   endif
 endif
+CFLAGS += -DKECCAK_PLATFORM="$(KECCAK_PLATFORM)"
 # Adjust the include dir depending on the target platform
 LIB_HASH_INCLUDES = $(LIB_HASH_DIR) $(LIB_HASH_DIR)/$(KECCAK_PLATFORM)
 
 # Include the necessary headers
 CFLAGS += $(foreach DIR, $(LIB_HASH_INCLUDES), -I$(DIR))
 CFLAGS += $(foreach DIR, $(RIJNDAEL_INCLUDES), -I$(DIR))
+CFLAGS += $(foreach DIR, $(GGM_INCLUDES), -I$(DIR))
 CFLAGS += $(foreach DIR, $(BLC_INCLUDES), -I$(DIR))
 CFLAGS += $(foreach DIR, $(PIOP_INCLUDES), -I$(DIR))
 CFLAGS += $(foreach DIR, $(FIELDS_INCLUDES), -I$(DIR))
@@ -444,6 +501,12 @@ ifeq ($(MQOM2_VARIANT),cat1-gf16-fast-r5)
   MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_SECURITY=128
   MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_BASE_FIELD=4
   MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_TRADEOFF=0
+  MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_NBROUNDS=5
+endif
+ifeq ($(MQOM2_VARIANT),cat1-gf16-faster-r5)
+  MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_SECURITY=128
+  MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_BASE_FIELD=4
+  MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_TRADEOFF=2
   MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_NBROUNDS=5
 endif
 ifeq ($(MQOM2_VARIANT),cat1-gf16-short-r3)
@@ -543,6 +606,12 @@ ifeq ($(MQOM2_VARIANT),cat3-gf16-fast-r5)
   MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_TRADEOFF=0
   MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_NBROUNDS=5
 endif
+ifeq ($(MQOM2_VARIANT),cat3-gf16-faster-r5)
+  MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_SECURITY=192
+  MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_BASE_FIELD=4
+  MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_TRADEOFF=2
+  MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_NBROUNDS=5
+endif
 ifeq ($(MQOM2_VARIANT),cat3-gf16-short-r3)
   MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_SECURITY=192
   MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_BASE_FIELD=4
@@ -638,6 +707,12 @@ ifeq ($(MQOM2_VARIANT),cat5-gf16-fast-r5)
   MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_SECURITY=256
   MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_BASE_FIELD=4
   MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_TRADEOFF=0
+  MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_NBROUNDS=5
+endif
+ifeq ($(MQOM2_VARIANT),cat5-gf16-faster-r5)
+  MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_SECURITY=256
+  MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_BASE_FIELD=4
+  MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_TRADEOFF=2
   MQOM2_VARIANT_CFLAGS+=-DMQOM2_PARAM_NBROUNDS=5
 endif
 ifeq ($(MQOM2_VARIANT),cat5-gf16-short-r3)

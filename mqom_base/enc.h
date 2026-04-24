@@ -68,10 +68,12 @@ extern void enc_clean_ctx(enc_ctx *ctx);
 extern void enc_clean_ctx_x2(enc_ctx_x2 *ctx);
 extern void enc_clean_ctx_x4(enc_ctx_x4 *ctx);
 extern void enc_clean_ctx_x8(enc_ctx_x8 *ctx);
+extern void enc_clean_ctx_ecb(enc_ctx_ecb *ctx);
 extern void enc_clean_ctx_pub(enc_ctx_pub *ctx);
 extern void enc_clean_ctx_pub_x2(enc_ctx_pub_x2 *ctx);
 extern void enc_clean_ctx_pub_x4(enc_ctx_pub_x4 *ctx);
 extern void enc_clean_ctx_pub_x8(enc_ctx_pub_x8 *ctx);
+extern void enc_clean_ctx_pub_ecb(enc_ctx_pub_ecb *ctx);
 extern void enc_uninit_ctx(enc_ctx *ctx);
 extern void enc_uninit_ctx_x2(enc_ctx_x2 *ctx);
 extern void enc_uninit_ctx_x4(enc_ctx_x4 *ctx);
@@ -86,18 +88,22 @@ extern void enc_uninit_ctx_pub_x8(enc_ctx_pub_x8 *ctx);
 #define enc_clean_ctx_x2(ctx)
 #define enc_clean_ctx_x4(ctx)
 #define enc_clean_ctx_x8(ctx)
+#define enc_clean_ctx_ecb(ctx)
 #define enc_clean_ctx_pub(ctx)
 #define enc_clean_ctx_pub_x2(ctx)
 #define enc_clean_ctx_pub_x4(ctx)
 #define enc_clean_ctx_pub_x8(ctx)
+#define enc_clean_ctx_pub_ecb(ctx)
 #define enc_uninit_ctx(ctx)
 #define enc_uninit_ctx_x2(ctx)
 #define enc_uninit_ctx_x4(ctx)
 #define enc_uninit_ctx_x8(ctx)
+#define enc_uninit_ctx_ecb(ctx)
 #define enc_uninit_ctx_pub(ctx)
 #define enc_uninit_ctx_pub_x2(ctx)
 #define enc_uninit_ctx_pub_x4(ctx)
 #define enc_uninit_ctx_pub_x8(ctx)
+#define enc_uninit_ctx_pub_ecb(ctx)
 #else
 #if !defined(MQOM2_FOR_LIBOQS) || (defined(MQOM2_FOR_LIBOQS) && (MQOM2_PARAM_SECURITY != 128))
 static inline void enc_clean_ctx(enc_ctx *ctx) {
@@ -120,6 +126,11 @@ static inline void enc_clean_ctx_x8(enc_ctx_x8 *ctx) {
 		mqom_cleanse(ctx, sizeof(enc_ctx_x8));
 	}
 }
+static inline void enc_clean_ctx_ecb(enc_ctx_ecb *ctx) {
+        if (ctx != NULL) {
+                mqom_cleanse(ctx, sizeof(enc_ctx_ecb));
+        }
+}
 
 static inline void enc_clean_ctx_pub(enc_ctx_pub *ctx) {
         if (ctx != NULL) {
@@ -141,6 +152,11 @@ static inline void enc_clean_ctx_pub_x8(enc_ctx_pub_x8 *ctx) {
 		mqom_cleanse(ctx, sizeof(enc_ctx_pub_x8));
 	}
 }
+static inline void enc_clean_ctx_pub_ecb(enc_ctx_pub_ecb *ctx) {
+	if(ctx != NULL){
+		mqom_cleanse(ctx, sizeof(enc_ctx_pub_ecb));
+	}
+}
 
 static inline void enc_uninit_ctx(enc_ctx *ctx) {
         (void)ctx;
@@ -154,6 +170,9 @@ static inline void enc_uninit_ctx_x4(enc_ctx_x4 *ctx) {
 static inline void enc_uninit_ctx_x8(enc_ctx_x8 *ctx) {
         (void)ctx;
 }
+static inline void enc_uninit_ctx_ecb(enc_ctx_ecb *ctx) {
+        (void)ctx;
+}
 static inline void enc_uninit_ctx_pub(enc_ctx_pub *ctx) {
         (void)ctx;
 }
@@ -164,6 +183,9 @@ static inline void enc_uninit_ctx_pub_x4(enc_ctx_pub_x4 *ctx) {
         (void)ctx;
 }
 static inline void enc_uninit_ctx_pub_x8(enc_ctx_pub_x8 *ctx) {
+        (void)ctx;
+}
+static inline void enc_uninit_ctx_pub_ecb(enc_ctx_pub_ecb *ctx) {
         (void)ctx;
 }
 #endif

@@ -42,7 +42,7 @@ static inline void gf256_bitslice32_vect_pack_gf2_composite(uint8_t x, uint32_t 
 }
 
 static inline void gf256_bitslice32_vect_pack_gf16_composite(uint8_t x, uint32_t x_bitsliced[8], uint32_t index32) {
-	uint8_t b0 = x & 0x01, b1 = (x >> 1) & 0x01, b2 = (x >> 2) & 0x01, b3 = (x >> 3) & 0x01;
+	uint32_t b0 = x & 0x01, b1 = (x >> 1) & 0x01, b2 = (x >> 2) & 0x01, b3 = (x >> 3) & 0x01;
 	x_bitsliced[0] |= ((b0 ^ b2) << index32);
 	//x_bitsliced[1] |= ((0) << index32);
 	x_bitsliced[2] |= ((b2) << index32);
@@ -475,7 +475,7 @@ static inline void gf256to2_bitslice32_vect_pack_gf2_composite(uint8_t x, uint32
 }
 
 static inline void gf256to2_bitslice32_vect_pack_gf16_composite(uint8_t x, uint32_t x_bitsliced[16], uint32_t index32) {
-	uint8_t b0 = x & 0x01, b1 = (x >> 1) & 0x01, b2 = (x >> 2) & 0x01, b3 = (x >> 3) & 0x01;
+	uint32_t b0 = x & 0x01, b1 = (x >> 1) & 0x01, b2 = (x >> 2) & 0x01, b3 = (x >> 3) & 0x01;
 	x_bitsliced[0] |= ((b0 ^ b2) << index32);
 	//x_bitsliced[1] |= ((0) << index32);
 	x_bitsliced[2] |= ((b2) << index32);

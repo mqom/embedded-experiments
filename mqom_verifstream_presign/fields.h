@@ -123,11 +123,19 @@ static const char fields_conf[] = "Fields ref implementation (pure C, SWAR x4 ci
 #define FIELD_IMPLEMENTATION_SUFFIX ref
 #elif defined(FIELDS_AVX2)
 #include "fields_avx2.h"
-static const char fields_conf[] = "Fields AVX2 implementation";
+#if defined(__GFNI__) && !defined(NO_GFNI)
+static const char fields_conf[] = "Fields AVX2 implementation with GFNI";
+#else
+static const char fields_conf[] = "Fields AVX2 implementation (without GFNI)";
+#endif
 #define FIELD_IMPLEMENTATION_SUFFIX avx2
 #elif defined(FIELDS_AVX512)
 #include "fields_avx512.h"
-static const char fields_conf[] = "Fields AVX512 implementation";
+#if defined(__GFNI__) && !defined(NO_GFNI)
+static const char fields_conf[] = "Fields AVX512 implementation with GFNI";
+#else
+static const char fields_conf[] = "Fields AVX512 implementation (without GFNI)";
+#endif
 #define FIELD_IMPLEMENTATION_SUFFIX avx512
 #else
 #error "Error: no low-level field implementation detected ..."
@@ -150,6 +158,7 @@ static const char fields_conf[] = "Fields AVX512 implementation";
 #define _field_ext_mult concat3(FIELD_EXT_PREFIX, _mult_, FIELD_IMPLEMENTATION_SUFFIX)
 #define _field_ext_constant_vect_mult concat3(FIELD_EXT_PREFIX, _constant_vect_mult_, FIELD_IMPLEMENTATION_SUFFIX)
 #define _field_ext_vect_mult concat3(FIELD_EXT_PREFIX, _vect_mult_, FIELD_IMPLEMENTATION_SUFFIX)
+#define _field_ext_vect_mult_multiple_public concat3(FIELD_EXT_PREFIX, _vect_mult_multiple_public_, FIELD_IMPLEMENTATION_SUFFIX)
 #define _field_ext_mat_mult concat3(FIELD_EXT_PREFIX, _mat_mult_, FIELD_IMPLEMENTATION_SUFFIX)
 #define _field_ext_mat_mult_tri concat3(FIELD_EXT_PREFIX, _mat_mult_tri_, FIELD_IMPLEMENTATION_SUFFIX)
 /* Hybrid multiplications */
@@ -173,6 +182,10 @@ static inline void field_ext_constant_vect_mult(field_ext_elt a, const field_ext
 
 static inline field_ext_elt field_ext_vect_mult(const field_ext_elt *a, const field_ext_elt *b, uint32_t len) {
 	return _field_ext_vect_mult(a, b, len);
+}
+
+static inline void field_ext_vect_mult_multiple_public(field_ext_elt* const *c, const field_ext_elt *a, field_ext_elt const* const *b, uint32_t len, uint32_t n) {
+	_field_ext_vect_mult_multiple_public(c, a, b, len, n);
 }
 
 static inline void field_ext_mat_mult(const field_ext_elt *A, const field_ext_elt *X, field_ext_elt *Y, uint32_t n, matrix_type mtype) {

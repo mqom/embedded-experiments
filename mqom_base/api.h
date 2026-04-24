@@ -11,12 +11,14 @@
 #define CRYPTO_ALGNAME MQOM2_PARAM_LABEL
 #define CRYPTO_VERSION "1.00"
 
-/* Deal with namespacing */
-#define crypto_sign_keypair MQOM_NAMESPACE(crypto_sign_keypair)
-#define crypto_sign MQOM_NAMESPACE(crypto_sign)
-#define crypto_sign_signature MQOM_NAMESPACE(crypto_sign_signature)
-#define crypto_sign_open MQOM_NAMESPACE(crypto_sign_open)
-#define crypto_sign_verify MQOM_NAMESPACE(crypto_sign_verify)
+/* Deal with namespacing:
+ * XXX: the "public" API might have special namespacing, hence
+ * the "PUBLIC_API" */
+#define crypto_sign_keypair MQOM_PUBLIC_API_NAMESPACE(crypto_sign_keypair)
+#define crypto_sign MQOM_PUBLIC_API_NAMESPACE(crypto_sign)
+#define crypto_sign_signature MQOM_PUBLIC_API_NAMESPACE(crypto_sign_signature)
+#define crypto_sign_open MQOM_PUBLIC_API_NAMESPACE(crypto_sign_open)
+#define crypto_sign_verify MQOM_PUBLIC_API_NAMESPACE(crypto_sign_verify)
 
 #if !defined(MQOM2_FOR_MUPQ) && !defined(MQOM2_FOR_LIBOQS)
 /*************************************************

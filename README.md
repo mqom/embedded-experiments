@@ -26,6 +26,7 @@ We explain hereafter the various command lines to use for each test to reproduce
   - [UART console communication](#uart-console-communication)
   - [About portability of the code across platforms](#about-portability-of-the-code-across-platforms)
   - [Porting to other Cortex-M boards](#porting-to-other-cortex-m-boards)
+  - [Using upstream MQOM repo](#using-upstream-mqom-repo)
 - [Rijndael tests](#rijndael-tests)
 - [Matrix Multiplication tests](#matrix-multiplication-tests)
 - [MQOM base optimizations](#mqom-base-optimizations)
@@ -37,6 +38,7 @@ We explain hereafter the various command lines to use for each test to reproduce
   - [Reference MQOM implementation benchmarks](#reference-mqom-implementation-benchmarks)
   - [Detailed benchmarks](#detailed-benchmarks)
   - [Checking the KATs](#checking-the-kats)
+  - [Using signature buffer as temporary buffer](#using-signature-buffer-as-temporary-buffer)
 - [MQOM one-tree experiments](#mqom-one-tree-experiments)
 - [MQOM verification streaming experiments](#mqom-verification-streaming-experiments)
 - [MQOM pre-signature experiments](#mqom-pre-signature-experiments)
@@ -47,7 +49,8 @@ We explain hereafter the various command lines to use for each test to reproduce
 ### Target platforms
 
 There are two main platforms targeted here for the article:
-- The STMicroeletronics [Nucleo L4R5ZI](https://www.st.com/en/evaluation-tools/nucleo-l4r5zi.html) featuring a [STM32L4R5ZI](https://www.st.com/en/microcontrollers-microprocessors/stm32l4r5-s5.html) MCU with 2 MB of flash and 640 KB of SRAM.
+- The STMicroeletronics [Nucleo L4R5ZI](https://www.st.com/en/evaluation-tools/nucleo-l4r5zi.html) featuring a [STM32L4R5ZI](https://www.st.com/en/microcontrollers-microprocessors/stm32l4r5-s5.html)
+MCU with 2 MB of flash and 640 KB of SRAM.
 - A custom board that integrates a [STM32F437](https://www.st.com/en/microcontrollers-microprocessors/stm32f427-437.html) MCU with 2 MB of flash and 256 KB of SRAM, also embedding a CRYP engine with AES hardware acceleration. The current implementation uses a [LEIA board by H2LAB](https://h2lab.github.io/smartleia.github.io/target.html).
 
 We also support the STMicroeletronics [STM32F4DISCOVERY](https://www.st.com/en/evaluation-tools/stm32f4discovery.html) board that features a [STM32F407](https://www.st.com/en/microcontrollers-microprocessors/stm32f407-417.html) MCU with
@@ -168,6 +171,31 @@ Since we use [libopencm3](https://libopencm3.org/) as the foundation of our firm
 When considering porting to a new MCU/board combo, the main files to modify are in the Hardware Abstraction Layer folder [embedded_CM4/src/hal/](embedded_CM4/src/hal/) as well as the linker scripts in [embedded_CM4/boards/](embedded_CM4/boards/).
 You will have to adapt depending on the MCU various initialization procedures such as the `clock_setup` that initializes the clocks, the UART setup and wiring to the proper GPIO pins of your board, etc.
 
+### Using upstream MQOM repo
+
+The current repository uses fixed MQOM code in the [mqom_base](mqom_base), [mqom_onetree](mqom_onetree) and [mqom_verifstream_presign](mqom_verifstream_presign) folders.
+It is possible to use the [upstream MQOM code](https://github.com/mqom/mqom-v2) by forcing the `UPSTREAM=1` variable when compiling in place of one of
+`ONETREE_TEST=1`, `PRESIGN_TEST=1` and `VERIFY_STREAM_TEST=1` (you can also tweak the [Makefile](Makefile) to point to another repository). Using the upstream code will allow
+you to test new upstream feature in the embedded context.
+
+In order to use the upstream code, you will first have to fetch it by using :
+
+```console
+$ make clean && BOARD=nucleol4r5zi UPSTREAM=1 make
+...
+[-] The MQOM git folder is not present ... Please fetch it with 'make fetch_mqom_git'!
+make: *** [Makefile:107: objects] Error 1
+
+$ make fetch_mqom_git
+[+] Fetching MQOM2 source tree from the git ...
+...
+
+# Then use all the compilation invocations presented below with UPSTREAM=1
+```
+
+**NOTE:** Beware that using the upstream code might break the embedded compilation depending on the included features and your options for MQOM.
+Use `UPSTREAM=1` it knowingly.
+
 ## Rijndael tests
 
 In order to reproduce the three main columns of **Table 1** from the article that summarizes the AES-128 and Rijndael-256-256 performance for bitslice/table-based/hardware Rijndael, use the following compilation toggles:
@@ -190,6 +218,8 @@ make clean && BOARD=leia RIJNDAEL_OPT_ARMV7M=1 RIJNDAEL_TEST=1 RIJNDAEL_EXTERNAL
 
 **NOTE:** The private/public encryption APIs and the `x2`, `x4`, `x8` APIs described in the article are exposed in the [rijndael/rijndael.h](mqom_base/rijndael/rijndael.h) header.
 
+### AES and Rijndael performance summary
+
 The resulting benchmarks should be the following:
 
 | Scheme            | Variant          | Bitslice KeySch. | Bitslice Enc. | Table-based KeySch. | Table-based Enc. | Hardware KeySch. + Enc. |
@@ -204,6 +234,24 @@ The resulting benchmarks should be the following:
 | Rijndael-256-256 | `x2` amortized   | 12 224           | 15 695        | -                   | -                | N/A                      |
 | Rijndael-256-256 | `x4`             | 5 600            | 46 488        | 5 334               | 14 000           | N/A                      |
 | Rijndael-256-256 | `x4` amortized   | 24 624           | 32 024        | -                   | -                | N/A                      |
+
+### Hardware acceleration Polling versus DMA
+
+The compilation of the hardware-based versions should also output a set of measurements to compare AES-128 hardware Polling versus DMA drivers.
+For each type (Polling and DMA), each number at position `i` (between 1 and 2047) is the cycles taken by the encryption of `i` sequential blocks of 16 bytes.
+
+```console
+ ==== Hardware AES polling versus DMA benchmarks =====
+==== POLLING
+499 587 675 763 851 939 1027 1115 1203 1291 1379 ... 180704
+==== DMA
+579 616 653 690 727 764 800 801 838 942 912 949 ... 72469
+======================
+```
+
+Plotting these number provides Figure 3 of the article:
+
+![AES-128 performance comparison for Polling vs DMA](hw_aes_polling_vs_dma.png)
 
 ## Matrix Multiplication tests
 
@@ -238,12 +286,12 @@ The resulting benchmarks should be the following:
 |----------------------------------------|----------------------------------|----------------------------------|-----------------------------------|
 | F256 Log/Exp tables ★                  | 15.3                             | 80.3                             | 277                               |
 | Full F256 mult table †                 | 10.7                             | 51.3                             | 176                               |
-| Basic circuit                          | 64.2                             | 348                              | 1213.7                            |
-| SWAR 32 bits                           | 21.3                             | 104.8                            | 353.4                             |
-| Bitslice                               | 20.0 (0.1)                       | 66.1 (0.3)                       | 338.9 (0.5)                       |
-| Bitslice with jump                     | 11.9 (0.1)                       | 39.2 (0.3)                       | 199.0 (0.5)                       |
-| Bitslice composite                     | 15.8 (0.1)                       | 52.2 (0.3)                       | 278.1 (0.5)                       |
-| Bitslice composite with jump           | **9.9** (0.1)                    | **32.3** (0.3)                   | **160.5** (0.5)                   |
+| Basic circuit                          | 64.2                             | 348                              | 1213                              |
+| SWAR 32 bits                           | 21.3                             | 104                              | 353                               |
+| Bitslice                               | 20.0 (0.1)                       | 66.1 (0.3)                       | 338 (0.5)                         |
+| Bitslice with jump                     | 11.9 (0.1)                       | 39.2 (0.3)                       | 199 (0.5)                         |
+| Bitslice composite                     | 15.8 (0.1)                       | 52.2 (0.3)                       | 278 (0.5)                         |
+| Bitslice composite with jump           | **9.9** (0.1)                    | **32.3** (0.3)                   | **160** (0.5)                     |
 
 ★ Log/Exp tables use ≈ 512 bytes in SRAM  
 † Full F256 multiplication table uses ≈ 65 KB in SRAM
@@ -257,7 +305,7 @@ We provide hereafter the compilation configurations for the four profiles (LUT, 
 
 For the Faster instance, compile with:
 ```console
-make clean && BOARD=nucleol4r5zi MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-faster-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=1" RIJNDAEL_BITSLICE=0 RIJNDAEL_TABLE=1 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=1 GGMTREE_NB_ENC_CTX_IN_MEMORY=3 BENCHMARK=0 VERIFY_MEMOPT=0 NO_EXPANDMQ_PRG_CACHE=1 PRG_ONE_RIJNDAEL_CTX=0 SEED_COMMIT_MEMOPT=0 RIJNDAEL_TABLE_FORCE_IN_FLASH=0 USE_SIGNATURE_BUFFER_AS_TEMP=0 make firmware
+make clean && BOARD=nucleol4r5zi MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-faster-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=1" RIJNDAEL_BITSLICE=0 RIJNDAEL_TABLE=1 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=5 BLC_NB_LEAF_SEEDS_IN_PARALLEL=32 BLC_SEEDCOMMIT_CACHE=1 BLC_SEEDEXPAND_CACHE=1 BENCHMARK=0 VERIFY_MEMOPT=0 NO_EXPANDMQ_PRG_CACHE=1 SEED_COMMIT_MEMOPT=0 SEED_COMMIT_MEMOPT=0 RIJNDAEL_TABLE_FORCE_IN_FLASH=0 USE_SIGNATURE_BUFFER_AS_TEMP=0 make firmware
 ```
 
 For the Fast instance, replace `MQOM2_VARIANT=cat1-gf16-faster-r5` with `MQOM2_VARIANT=cat1-gf16-fast-r5`. For the Short instance, replace  `MQOM2_VARIANT=cat1-gf16-faster-r5` with `MQOM2_VARIANT=cat1-gf16-short-r5`.
@@ -266,9 +314,9 @@ The results should be the following:
 
 | Scheme | Instance | Sig. size | Implem | KGen (Mc) | Sign (Mc) | Verify (Mc) | KGen (KB) | Sign (KB) | Verify (KB) |
 |--------|----------|-----------|--------|-----------|-----------|-------------|-----------|-----------|-------------|
-| MQOM (F16 R5) **This work** | Faster | 3 984 | LUT | 6.74★ | 30.5★ | 29.2 | 3.52★ | 12.8★ | 13.6 |
-| MQOM (F16 R5) **This work** | Fast | 3 280 | LUT | 6.74★ | 56.5★ | 49.8 | 3.52★ | 11.3★ | 12.6 |
-| MQOM (F16 R5) **This work** | Short | 2 916 | LUT | 5.99★ | 214.6★ | 215.5 | 3.65★ | 14.9★ | 18.4 |
+| MQOM (F16 R5) **This work** | Faster | 3 984 | LUT | 6.74★ | 29.2★ | 28.0 | 3.52★ | 12.0★ | 12.9 |
+| MQOM (F16 R5) **This work** | Fast | 3 280 | LUT | 6.74★ | 52.8★ | 46.4 | 3.52★ | 10.5★ | 11.8 |
+| MQOM (F16 R5) **This work** | Short | 2 916 | LUT | 5.99★ | 196★ | 194 | 3.65★ | 14.2★ | 17.7 |
 
 ★ Performance results rely on LUT use over secret entries.
 
@@ -276,24 +324,24 @@ The results should be the following:
 
 For the Faster instance, compile with:
 ```console
-make clean && BOARD=nucleol4r5zi MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-faster-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=1 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=1 GGMTREE_NB_ENC_CTX_IN_MEMORY=3 BENCHMARK=0 NO_EXPANDMQ_PRG_CACHE=1 make firmware
+make clean && BOARD=nucleol4r5zi MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-faster-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=1 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=0 NO_EXPANDMQ_PRG_CACHE=1 GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=5 BLC_NB_LEAF_SEEDS_IN_PARALLEL=32 BLC_SEEDCOMMIT_CACHE=1 BLC_SEEDEXPAND_CACHE=1 BENCHMARK=0 make firmware
 ```
 
-For the Fast instance, replace `MQOM2_VARIANT=cat1-gf16-faster-r5` with `MQOM2_VARIANT=cat1-gf16-fast-r5`. For the Short instance, replace  `MQOM2_VARIANT=cat1-gf16-faster-r5` with `MQOM2_VARIANT=cat1-gf16-short-r5`.
+For the Fast instance, replace `MQOM2_VARIANT=cat1-gf16-faster-r5` with `MQOM2_VARIANT=cat1-gf16-fast-r5`. For the Short instance, replace  `MQOM2_VARIANT=cat1-gf16-faster-r5` with `MQOM2_VARIANT=cat1-gf16-short-r5` and ̀`GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=5 BLC_NB_LEAF_SEEDS_IN_PARALLEL=32` with `GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=7 BLC_NB_LEAF_SEEDS_IN_PARALLEL=64`.
 
 The results should be the following:
 
 | Scheme | Instance | Sig. size | Implem | KGen (Mc) | Sign (Mc) | Verify (Mc) | KGen (KB) | Sign (KB) | Verify (KB) |
 |--------|----------|-----------|--------|-----------|-----------|-------------|-----------|-----------|-------------|
-| MQOM (F16 R5) **This work** | Faster | 3 984 | Bal. | 9.95 | 38.3 | 29.8 | 2.5 | 11.7 | 12.6 |
-| MQOM (F16 R5) **This work** | Fast | 3 280 | Bal. | 9.95 | 76.5 | 50.5 | 2.5 | 10.3 | 11.6 |
-| MQOM (F16 R5) **This work** | Short | 2 916 | Bal. | 9.23 | 308 | 216 | 2.65 | 14.0 | 17.5 |
+| MQOM (F16 R5) **This work** | Faster | 3 984 | Bal. | 9.95 | 37.3 | 28.5 | 2.50 | 10.9 | 12.0 |
+| MQOM (F16 R5) **This work** | Fast | 3 280 | Bal. | 9.95 | 73.2 | 47.0 | 2.50 | 9.50 | 10.7 |
+| MQOM (F16 R5) **This work** | Short | 2 916 | Bal. | 9.23 | 291 | 194 | 2.65 | 13.5 | 16.8 |
 
 ### Memory profile
 
 For the Faster instance, compile with:
 ```console
-make clean && BOARD=nucleol4r5zi MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-faster-r5 USE_PRG_CACHE=0 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=1 PIOP_BITSLICE=0 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=1 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=0 BENCHMARK=0 VERIFY_MEMOPT=1 NO_EXPANDMQ_PRG_CACHE=1 PRG_ONE_RIJNDAEL_CTX=1 SEED_COMMIT_MEMOPT=1 PIOP_NB_PARALLEL_REPETITIONS_SIGN=9 PIOP_NB_PARALLEL_REPETITIONS_VERIFY=4 RIJNDAEL_TABLE_FORCE_IN_FLASH=1 make firmware
+make clean && BOARD=nucleol4r5zi MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-faster-r5 USE_PRG_CACHE=0 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=1 PIOP_BITSLICE=0 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=1 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=0 BENCHMARK=0 VERIFY_MEMOPT=1 NO_EXPANDMQ_PRG_CACHE=1 PRG_ONE_RIJNDAEL_CTX=1 SEED_COMMIT_MEMOPT=1 PIOP_NB_PARALLEL_REPETITIONS_SIGN=9 PIOP_NB_PARALLEL_REPETITIONS_VERIFY=4 RIJNDAEL_TABLE_FORCE_IN_FLASH=1 GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=4 BLC_NB_LEAF_SEEDS_IN_PARALLEL=8 make firmware
 ```
 
 For the Fast instance, replace `MQOM2_VARIANT=cat1-gf16-faster-r5` with `MQOM2_VARIANT=cat1-gf16-fast-r5`. For the Short instance, replace  `MQOM2_VARIANT=cat1-gf16-faster-r5` with `MQOM2_VARIANT=cat1-gf16-short-r5`.
@@ -302,9 +350,9 @@ The results should be the following:
 
 | Scheme | Instance | Sig. size | Implem | KGen (Mc) | Sign (Mc) | Verify (Mc) | KGen (KB) | Sign (KB) | Verify (KB) |
 |--------|----------|-----------|--------|-----------|-----------|-------------|-----------|-----------|-------------|
-| MQOM (F16 R5) **This work** | Faster | 3 984 | Mem. | 9.93 | 116 | 77.5 | 1.48 | 5.83 | 3.46 |
-| MQOM (F16 R5) **This work** | Fast | 3 280 | Mem. | 9.93 | 183 | 81.1 | 1.48 | 4.99 | 3.36 |
-| MQOM (F16 R5) **This work** | Short | 2 916 | Mem. | 9.21 | 792 | 249 | 1.62 | 5.49 | 3.75 |
+| MQOM (F16 R5) **This work** | Faster | 3 984 | Mem. | 9.93 | 79.6 | 68.4 | 1.48 | 6.56 | 3.91 |
+| MQOM (F16 R5) **This work** | Fast | 3 280 | Mem. | 9.93 | 102 | 70.9 | 1.48 | 5.76 | 3.91 |
+| MQOM (F16 R5) **This work** | Short | 2 916 | Mem. | 9.21 | 366 | 212 | 1.62 | 6.00 | 4.24 |
 
 ### Hardware profile
 
@@ -312,18 +360,18 @@ The results should be the following:
 
 For the Faster instance, compile with:
 ```console
-make clean && BOARD=leia MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-faster-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=0 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=1 USE_ENC_CTX_CLEANSING=1 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=3 BENCHMARK=0 VERIFY_MEMOPT=0 NO_EXPANDMQ_PRG_CACHE=1 PRG_ONE_RIJNDAEL_CTX=0 SEED_COMMIT_MEMOPT=0 RIJNDAEL_TABLE_FORCE_IN_FLASH=1 EXTRA_CFLAGS="-DEXTERNAL_COMMON_OVERRIDE -I../embedded_CM4/" make firmware
+make clean && BOARD=leia MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-faster-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=0 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=1 USE_ENC_CTX_CLEANSING=1 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=3 BENCHMARK=0 VERIFY_MEMOPT=0 NO_EXPANDMQ_PRG_CACHE=1 PRG_ONE_RIJNDAEL_CTX=0 SEED_COMMIT_MEMOPT=0 RIJNDAEL_TABLE_FORCE_IN_FLASH=1 GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=5 BLC_NB_LEAF_SEEDS_IN_PARALLEL=32 EXTRA_CFLAGS="-DEXTERNAL_COMMON_OVERRIDE -I../common_tests/" make firmware
 ```
 
-For the Fast instance, replace `MQOM2_VARIANT=cat1-gf16-faster-r5` with `MQOM2_VARIANT=cat1-gf16-fast-r5`. For the Short instance, replace  `MQOM2_VARIANT=cat1-gf16-faster-r5` with `MQOM2_VARIANT=cat1-gf16-short-r5`.
+For the Fast instance, replace `MQOM2_VARIANT=cat1-gf16-faster-r5` with `MQOM2_VARIANT=cat1-gf16-fast-r5`. For the Short instance, replace  `MQOM2_VARIANT=cat1-gf16-faster-r5` with `MQOM2_VARIANT=cat1-gf16-short-r5` and `GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=5 BLC_NB_LEAF_SEEDS_IN_PARALLEL=32` with `GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=7 BLC_NB_LEAF_SEEDS_IN_PARALLEL=64`.
 
 The results should be the following:
 
 | Scheme | Instance | Sig. size | Implem | KGen (Mc) | Sign (Mc) | Verify (Mc) | KGen (KB) | Sign (KB) | Verify (KB) |
 |--------|----------|-----------|--------|-----------|-----------|-------------|-----------|-----------|-------------|
-| MQOM (F16 R5) **This work** | Faster | 3 984 | Hard. | 8.94† | 26.7† | 25.5† | 1.32† | 10.0† | 11.0† |
-| MQOM (F16 R5) **This work** | Fast | 3 280 | Hard. | 8.94† | 46.9† | 40.3† | 1.32† | 8.82† | 9.92† |
-| MQOM (F16 R5) **This work** | Short | 2 916 | Hard. | 7.92† | 163† | 158† | 1.44† | 12.2† | 15.7† |
+| MQOM (F16 R5) **This work** | Faster | 3 984 | Hard. | 8.96† | 23.5† | 22.6† | 1.28† | 9.96† | 10.9† |
+| MQOM (F16 R5) **This work** | Fast | 3 280 | Hard. | 8.96† | 40.7† | 32.2† | 1.28† | 8.58† | 9.83† |
+| MQOM (F16 R5) **This work** | Short | 2 916 | Hard. | 7.94† | 112† | 108† | 1.43† | 12.2† | 15.6† |
 
 † Uses hardware acceleration for AES-128 (only on STM32F437).
 
@@ -336,18 +384,20 @@ is below 50 KB. Below are the expected results for the most resource intensive L
 
  Scheme                       | Instance | Sig. Size | Implem | KGen (Mc) | Sign (Mc) | Verify (Mc) | KGen (KB) | Sign (KB) | Verify (KB) |
 | ---------------------------- | -------- | --------- | ------ | --------- | --------- | ----------- | --------- | --------- | ----------- |
-| MQOM (F16 R5) **This work** | Faster   | 15 864    | LUT    | 95.8★     | 376★      | 367         | 7.7★      | 45.2★     | 48.8        |
-| MQOM (F16 R5) **This work** | Faster   | 15 864    | Bal.   | 124       | 459       | 370         | 6.68      | 44.2      | 47.8        |
-| MQOM (F16 R5) **This work** | Faster   | 15 864    | Mem.   | 125       | 1 712     | 1 627       | 2.33      | 18.2      | 7.92        |
-| MQOM (F16 R5) **This work** | Fast     | 13 772    | LUT    | 95.8★     | 545★      | 537         | 7.71★     | 40.3★     | 44.8        |
-| MQOM (F16 R5) **This work** | Fast     | 13 772    | Bal.   | 124       | 761       | 538         | 6.68      | 39.1      | 43.9        |
-| MQOM (F16 R5) **This work** | Fast     | 13 772    | Mem.   | 125       | 2 075     | 1 378       | 2.33      | 14.9      | 7.43        |
-| MQOM (F16 R5) **This work** | Short    | 12 014    | LUT    | 90.5★     | 1 728★    | 1 728       | 7.96★     | 36.0★     | 43.4        |
-| MQOM (F16 R5) **This work** | Short    | 12 014    | Bal.   | 118       | 2 988     | 1 736       | 6.95      | 37.0      | 42.7        |
-| MQOM (F16 R5) **This work** | Short    | 12 014    | Mem.   | 118       | 7 434     | 2 772       | 2.60      | 15.6      | 7.40        |
+| MQOM (F16 R5) **This work** | Faster   | 15 864    | LUT    | 95.8★     | 371★      | 364         | 7.70★      | 43.2★     | 46.7        |
+| MQOM (F16 R5) **This work** | Faster   | 15 864    | Bal.   | 124       | 458       | 366         | 6.68      | 42.2      | 45.8        |
+| MQOM (F16 R5) **This work** | Faster   | 15 864    | Mem.   | 125       | 1 347     | 1 497       | 2.33      | 18.9      | 7.99        |
+| MQOM (F16 R5) **This work** | Fast     | 13 772    | LUT    | 95.8★     | 466★      | 454         | 7.71★     | 31.5★     | 32.3        |
+| MQOM (F16 R5) **This work** | Fast     | 13 772    | Bal.   | 124       | 710       | 459         | 6.68      | 30.4      | 31.2        |
+| MQOM (F16 R5) **This work** | Fast     | 13 772    | Mem.   | 125       | 1 336     | 1 243       | 2.33      | 15.8      | 7.75        |
+| MQOM (F16 R5) **This work** | Short    | 12 014    | LUT    | 90.5★     | 1 660★    | 1 659       | 7.96★     | 36.0★     | 41.3        |
+| MQOM (F16 R5) **This work** | Short    | 12 014    | Bal.   | 118       | 2 828     | 1 656       | 6.95      | 35.1      | 40.7        |
+| MQOM (F16 R5) **This work** | Short    | 12 014    | Mem.   | 118       | 3 806     | 2 419       | 2.60      | 16.4      | 8.26        |
 
 ★ Performance results rely on LUT use over secret entries.
 
+
+**NOTE:** for security levels L3 and L5 there is no hardware profile since they use Rijndael-256-256 and only AES-128 is available in the STM32 accelerator.
 
 ### Reference MQOM implementation benchmarks
 
@@ -376,7 +426,7 @@ The following results should be obtained:
 For all the previous compilation, you can get **detailed benchmarks for BLC and PIOP components** using the `BENCHMARK=1` compilation toggle. For instance, for the L1 Balanced implementation Faster instance:
 
 ```console
-make clean && BOARD=nucleol4r5zi MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-faster-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=1 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=1 GGMTREE_NB_ENC_CTX_IN_MEMORY=3 BENCHMARK=0 NO_EXPANDMQ_PRG_CACHE=1 make BENCHMARK=1 firmware
+make clean && BOARD=nucleol4r5zi MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-faster-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=1 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=0 NO_EXPANDMQ_PRG_CACHE=1 GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=5 BLC_NB_LEAF_SEEDS_IN_PARALLEL=32 BLC_SEEDCOMMIT_CACHE=1 BLC_SEEDEXPAND_CACHE=1 BENCHMARK=1 make firmware
 ```
 
 will provide the following additional output on the serial console:
@@ -385,35 +435,33 @@ will provide the following additional output on the serial console:
 ```console
 ...
 Timing in cycles:
- - Key Gen: 9959339.00 cycles
- - Sign:    42631783.00 cycles
- - Verify:  29864638.00 cycles
+ - Key Gen: 9958488.00 cycles
+ - Sign:    41112759.00 cycles
+ - Verify:  30643322.00 cycles
 
 
  - Signing
-   - BLC.Commit: 1410.000000 ms (22453376.000000 cycles)
-   - [BLC.Commit] Expand Trees: 270.000000 ms (3458748.000000 cycles)
-   - [BLC.Commit] Seed Commit: 250.000000 ms (5278301.000000 cycles)
-   - [BLC.Commit] PRG: 440.000000 ms (6592025.000000 cycles)
-   - [BLC.Commit] XOF: 260.000000 ms (4466516.000000 cycles)
-   - [BLC.Commit] Arithm: 80.000000 ms (1497635.000000 cycles)
-   - PIOP.Compute: 1200.000000 ms (19217114.000000 cycles)
-   - [PIOP.Compute] ExpandMQ: 320.000000 ms (4933010.000000 cycles)
+   - BLC.Commit: 1310.000000 ms (20939882.000000 cycles)
+   - [BLC.Commit] Expand Trees: 200.000000 ms (3364661.000000 cycles)
+   - [BLC.Commit] Seed Commit: 460.000000 ms (7593437.000000 cycles)
+   - [BLC.Commit] PRG: 430.000000 ms (7112036.000000 cycles)
+   - [BLC.Commit] XOF: 450.000000 ms (7161957.000000 cycles)
+   - [BLC.Commit] Arithm: 230.000000 ms (4205139.000000 cycles)
+   - PIOP.Compute: 1200.000000 ms (19212700.000000 cycles)
+   - [PIOP.Compute] ExpandMQ: 270.000000 ms (4934420.000000 cycles)
    - [PIOP.Compute] Expand Batching Mat: 0.000000 ms (34472.000000 cycles)
-   - [PIOP.Compute] Matrix Mul Ext: 670.000000 ms (10990203.000000 cycles)
-   - [PIOP.Compute] Compute t1: 10.000000 ms (226389.000000 cycles)
-   - [PIOP.Compute] Compute P_zi: 110.000000 ms (1630680.000000 cycles)
-   - [PIOP.Compute] Batch and Mask: 30.000000 ms (526638.000000 cycles)
-   - Sample Challenge: 10.000000 ms (24724.000000 cycles)
-   - BLC.Open: 50.000000 ms (835843.000000 cycles)
+   - [PIOP.Compute] Matrix Mul Ext: 690.000000 ms (10984750.000000 cycles)
+   - [PIOP.Compute] Compute t1: 20.000000 ms (226529.000000 cycles)
+   - [PIOP.Compute] Compute P_zi: 90.000000 ms (1630160.000000 cycles)
+   - [PIOP.Compute] Batch and Mask: 30.000000 ms (526702.000000 cycles)
+   - Sample Challenge: 0.000000 ms (24479.000000 cycles)
+   - BLC.Open: 50.000000 ms (835880.000000 cycles)
 ...
 ```
 
 You should expect figures corresponding to something similar to the data in the following detailed charts (for the L1 security level):
 
-![MQOM L1 F16 Faster R5 breakdown](mqom_l1_f16_faster_r5_breakdown.svg)
-![MQOM L1 F16 Fast R5 breakdown](mqom_l1_f16_fast_r5_breakdown.svg)
-![MQOM L1 F16 Short R5 breakdown](mqom_l1_f16_short_r5_breakdown.svg)
+![MQOM L1 F16 Faster, Fast and Short R5 breakdown](mqom_detailed_perf.png)
 
 ### Checking the KATs
 
@@ -423,7 +471,7 @@ for 2 KATs to be checked here (you can put larger numbers, but beware of the slo
 Fast L1 instance can be compiled with:
 
 ```console
-make clean && BOARD=nucleol4r5zi MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-fast-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=1" RIJNDAEL_BITSLICE=0 RIJNDAEL_TABLE=1 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=1 GGMTREE_NB_ENC_CTX_IN_MEMORY=3 BENCHMARK=0 VERIFY_MEMOPT=0 NO_EXPANDMQ_PRG_CACHE=1 PRG_ONE_RIJNDAEL_CTX=0 SEED_COMMIT_MEMOPT=0 RIJNDAEL_TABLE_FORCE_IN_FLASH=0 USE_SIGNATURE_BUFFER_AS_TEMP=0 EXTRA_CFLAGS="-DEMBEDDED_KAT_TESTS -DEMBEDDED_KAT_NUM_TESTS=2" make firmware
+make clean && BOARD=nucleol4r5zi MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-fast-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=1 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=0 NO_EXPANDMQ_PRG_CACHE=1 GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=5 BLC_NB_LEAF_SEEDS_IN_PARALLEL=32 BLC_SEEDCOMMIT_CACHE=1 BLC_SEEDEXPAND_CACHE=1 BENCHMARK=0 EXTRA_CFLAGS="-DEMBEDDED_KAT_TESTS -DEMBEDDED_KAT_NUM_TESTS=2" make firmware
 ```
 
 You should see the additional following output on the serial console:
@@ -435,6 +483,12 @@ You should see the additional following output on the serial console:
 ```
 
 **NOTE:** Since the "Faster" instance has been introduced in the article with new parameters, only the original Fast and Short instances have KATs.
+
+### Using signature buffer as temporary buffer
+
+It is possible to use the signature (output) buffer as a scratchpad temporary buffer to reduce the memory footprint for
+the signature algorithm. In order to activate this, use `USE_SIGNATURE_BUFFER_AS_TEMP=1` (for instance, this saves ~1 KB of SRAM in the L1 Fast instance).
+
 
 ## MQOM one-tree experiments
 
@@ -474,15 +528,20 @@ make clean && BOARD=nucleol4r5zi ONETREE_TEST=1 MQOM2_OPTIONS="MQOM2_VARIANT=cat
 
 - To reproduce the Hard-1 benchmarks, compile with:
 ```console
-make clean && BOARD=leia ONETREE_TEST=1 MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-fast-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=0 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=0 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=1 USE_ENC_CTX_CLEANSING=1 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=3 BENCHMARK=0 VERIFY_MEMOPT=0 NO_EXPANDMQ_PRG_CACHE=1 PRG_ONE_RIJNDAEL_CTX=0 SEED_COMMIT_MEMOPT=0 RIJNDAEL_TABLE_FORCE_IN_FLASH=1 BLC_ONETREE=1 BLC_ONETREE_MEMOPT=1 EXTRA_CFLAGS="-DEXTERNAL_COMMON_OVERRIDE -I../embedded_CM4/" make firmware
+make clean && BOARD=leia ONETREE_TEST=1 MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-fast-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=0 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=0 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=1 USE_ENC_CTX_CLEANSING=1 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=3 BENCHMARK=0 VERIFY_MEMOPT=0 NO_EXPANDMQ_PRG_CACHE=1 PRG_ONE_RIJNDAEL_CTX=0 SEED_COMMIT_MEMOPT=0 RIJNDAEL_TABLE_FORCE_IN_FLASH=1 BLC_ONETREE=1 BLC_ONETREE_MEMOPT=1 EXTRA_CFLAGS="-DEXTERNAL_COMMON_OVERRIDE -I../common_tests/" make firmware
 ```
 
 - To reproduce the Hard-2 benchmarks, compile with:
 ```console
-make clean && BOARD=leia ONETREE_TEST=1 MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-fast-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=0 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=0 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=1 USE_ENC_CTX_CLEANSING=1 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=3 BENCHMARK=0 VERIFY_MEMOPT=0 NO_EXPANDMQ_PRG_CACHE=1 PRG_ONE_RIJNDAEL_CTX=0 SEED_COMMIT_MEMOPT=0 RIJNDAEL_TABLE_FORCE_IN_FLASH=1 BLC_ONETREE=1 BLC_ONETREE_MEMOPT=1 BLC_ONETREE_NB_PARALLEL_REPETITIONS_SIGN=9 BLC_ONETREE_NB_PARALLEL_REPETITIONS_VERIFY=9 EXTRA_CFLAGS="-DEXTERNAL_COMMON_OVERRIDE -I../embedded_CM4/" make firmware
+make clean && BOARD=leia ONETREE_TEST=1 MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-fast-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=0 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=0 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=1 USE_ENC_CTX_CLEANSING=1 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=3 BENCHMARK=0 VERIFY_MEMOPT=0 NO_EXPANDMQ_PRG_CACHE=1 PRG_ONE_RIJNDAEL_CTX=0 SEED_COMMIT_MEMOPT=0 RIJNDAEL_TABLE_FORCE_IN_FLASH=1 BLC_ONETREE=1 BLC_ONETREE_MEMOPT=1 BLC_ONETREE_NB_PARALLEL_REPETITIONS_SIGN=9 BLC_ONETREE_NB_PARALLEL_REPETITIONS_VERIFY=9 EXTRA_CFLAGS="-DEXTERNAL_COMMON_OVERRIDE -I../common_tests/" make firmware
 ```
 
-**NOTE1:** you can change the MQOM instance to the one you want. Beware however that there is no Faster instance for one-tree optimization (it has not been ported there): only the original MQOM instances are available.
+Producing the Short variant benchmarks can be obtained simply by replacing the `MQOM2_VARIANT=cat1-gf16-fast-r5` by `MQOM2_VARIANT=cat1-gf16-short-r5`, and replacing for the "-2" variants (LUT-2, Bal-2, Mem-2 and Hard-2) the
+`BLC_ONETREE_NB_PARALLEL_REPETITIONS_SIGN=9 BLC_ONETREE_NB_PARALLEL_REPETITIONS_VERIFY=9` options with `BLC_ONETREE_NB_PARALLEL_REPETITIONS_SIGN=6 BLC_ONETREE_NB_PARALLEL_REPETITIONS_VERIFY=6`.
+
+
+**NOTE1:** you can change the MQOM instance to the one you want.
+Beware however that there is no Faster instance for one-tree optimization (it has not been ported there): only the original MQOM instances are available.
 
 **NOTE2:** the MQOM KATs have no sense for the one-tree experiments as they imply specifications tweaks.
 
@@ -490,14 +549,22 @@ The resulting benchmarks should be the following:
 
 | Scheme | Instance | Sig. size | Implem | KGen (Mc) | Sign (Mc) | Verify (Mc) | KGen (KB) | Sign (KB) | Verify (KB) |
 |--------|----------|-----------|--------|-----------|-----------|-------------|-----------|-----------|-------------|
-| MQOM (L1 F16 R5) – One-Tree | Fast | 3 264 | LUT-1  | 6.74★ | 62.5★ | 56.0 | 3.52★ | 35.7★ | 36.0 |
-|  |  |  | Bal.-1 | 9.95 | 88.2 | 56.4 | 2.50 | 34.4 | 35.0 |
-|  |  |  | Mem.-1 | 9.93 | 192 | 114 | 1.48 | 11.7 | 11.2 |
-|  |  |  | Hard.-1 | 8.87† | 49.7† | 43.4† | 1.30† | 18.2† | 18.6† |
-|  |  |  | LUT-2  | 6.74★ | 68.2★ | 62.7 | 3.52★ | 22.4★ | 22.6 |
-|  |  |  | Bal.-2 | 9.95 | 101 | 62.9 | 2.50 | 21.5 | 21.6 |
-|  |  |  | Mem.-2 | 9.93 | 206 | 121 | 1.48 | 8.8 | 8.3 |
-|  |  |  | Hard.-2 | 8.87† | 57.4† | 49.2† | 1.30† | 11.7† | 12.1† |
+| MQOM (L1 F16 R5) – One-Tree | Fast | 3 264 | LUT-1  | 6.75★ | 62.7★ | 56.3 | 3.52★ | 35.7★ | 36.0 |
+|  |  |  | Bal.-1 | 9.95 | 88.4 | 56.7 | 2.50 | 34.4 | 35.0 |
+|  |  |  | Mem.-1 | 9.93 | 186 | 109 | 1.48 | 11.7 | 11.2 |
+|  |  |  | Hard.-1 | 8.96† | 50.0† | 43.6† | 1.28† | 18.2† | 18.6† |
+|  |  |  | LUT-2  | 6.74★ | 68.4★ | 63.0 | 3.52★ | 22.4★ | 22.6 |
+|  |  |  | Bal.-2 | 9.95 | 101 | 63.1 | 2.50 | 21.5 | 21.6 |
+|  |  |  | Mem.-2 | 9.93 | 203 | 116 | 1.48 | 8.80 | 8.30 |
+|  |  |  | Hard.-2 | 8.96† | 55.1† | 49.7† | 1.28† | 11.7† | 12.1† |
+|                             | Short | 2 884 | LUT-1  | 5.99★ | 246★ | 249 | 3.65★ | 28.6★ | 29.2 |
+|  |  |  | Bal.-1 | 9.23 | 381 | 249 | 2.64 | 27.5 | 28.2 |
+|  |  |  | Mem.-1 | 9.20 | 991 | 591 | 1.62 | 10.1 | 9.47 |
+|  |  |  | Hard.-1 | 7.93† | 179† | 177† | 1.42† | 14.6† | 15.5† |
+|  |  |  | LUT-2  | 5.99★ | 278★ | 288 | 3.65★ | 17.9★ | 21.3 |
+|  |  |  | Bal.-2 | 9.23 | 459 | 457 | 2.64 | 17.0 | 20.4 |
+|  |  |  | Mem.-2 | 9.20 | 1 070 | 636 | 1.62 | 7.96 | 7.24 |
+|  |  |  | Hard.-2 | 7.93† | 206† | 210† | 1.43† | 12.8† | 16.2† |
 
 ★ Performance results rely on LUT use over secret entries.
 
@@ -521,27 +588,38 @@ The resulting benchmarks should be the following:
 
 | Level / Instance | τ | chk₀ size | chkₑ size | sig size | Init. | Update chk₀ (Mc) | Update chkₑ (Mc) | Final. (Mc) | Total (Mc) |
 |------------------|---|-----------|-----------|----------|-------|-------------|-------------|--------|-------|
-| L1 Short         | 12 | 84 B      | 236 B     | 2 916 B  | 3.49  | 0.03        | 16.7        | 0.10   | 204.0 |
-| L1 Fast          | 17 | 84 B      | 188 B     | 3 280 B  | 3.72  | 0.04        | 2.92        | 0.12   | 53.4  |
-| L5 Short         | 25 | 164 B     | 474 B     | 12 014 B | 68.9  | 0.09        | 70.0        | 0.33   | 1 819 |
-| L5 Fast          | 36 | 164 B     | 378 B     | 13 772 B | 69.5  | 0.16        | 15.24       | 0.45   | 618.7 |
+| L1 Short         | 12 | 84 B      | 236 B     | 2 916 B  | 3.49  | 0.03        | 15.4        | 0.10   | 188 |
+| L1 Fast          | 17 | 84 B      | 188 B     | 3 280 B  | 3.72  | 0.04        | 2.76        | 0.12   | 48.0  |
+| L5 Short         | 25 | 164 B     | 474 B     | 12 014 B | 68.9  | 0.09        | 68.2        | 0.33   | 1 706 |
+| L5 Fast          | 36 | 164 B     | 378 B     | 13 772 B | 69.5  | 0.16        | 15.0        | 0.45   | 595 |
 
 
 ## MQOM pre-signature experiments
 
-The pre-signature experiments use the toggle `PRESIGN_TEST=1`. In order to reproduce the performance Table for the section "Pre-signature", one must compile the Balanced profile implementation with the following options for L1 Fast using **the original PoW (Proof-of-Work)**:
+The pre-signature experiments use the toggle `PRESIGN_TEST=1`. In order to reproduce the performance Table for the section "Pre-signature", one must compile the Balanced profile implementation with the following options for L1 Short using **the original PoW (Proof-of-Work)**:
 
 ```console
-make clean && BOARD=nucleol4r5zi PRESIGN_TEST=1 MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-fast-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=1 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=1 GGMTREE_NB_ENC_CTX_IN_MEMORY=3 BENCHMARK=0 NO_EXPANDMQ_PRG_CACHE=1 make firmware
+make clean && BOARD=nucleol4r5zi PRESIGN_TEST=1 MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-short-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=1 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=0 NO_EXPANDMQ_PRG_CACHE=1 GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=7 BLC_NB_LEAF_SEEDS_IN_PARALLEL=64 BLC_SEEDCOMMIT_CACHE=1 BLC_SEEDEXPAND_CACHE=1 BENCHMARK=0 make firmware
 ```
 
-For the Short instance, adapt `MQOM2_VARIANT=cat1-gf16-fast-r5` to `MQOM2_VARIANT=cat1-gf16-short-r5` as usual.
+In order to reproduce the performance of the Short **tweaked (smaller) PoW**, one must use the extra CFLAGS `EXTRA_CFLAGS="-DWITH_LOW_POW"`:
 
-In order to reproduce the performance of the **tweaked (smaller) PoW**, one must use the extra CFLAGS `EXTRA_CFLAGS="-DWITH_LOW_POW"`:
-
-```console 
-make clean && BOARD=nucleol4r5zi PRESIGN_TEST=1 MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-fast-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=1 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=1 GGMTREE_NB_ENC_CTX_IN_MEMORY=3 BENCHMARK=0 NO_EXPANDMQ_PRG_CACHE=1 EXTRA_CFLAGS="-DWITH_LOW_POW" make firmware
+```console
+make clean && BOARD=nucleol4r5zi PRESIGN_TEST=1 MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-short-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=1 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=0 NO_EXPANDMQ_PRG_CACHE=1 GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=7 BLC_NB_LEAF_SEEDS_IN_PARALLEL=64 BLC_SEEDCOMMIT_CACHE=1 BLC_SEEDEXPAND_CACHE=1 BENCHMARK=0 EXTRA_CFLAGS="-DWITH_LOW_POW" make firmware
 ```
+
+For the L1 Fast instance:
+
+```console
+make clean && BOARD=nucleol4r5zi PRESIGN_TEST=1 MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-fast-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=1 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=0 NO_EXPANDMQ_PRG_CACHE=1 GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=5 BLC_NB_LEAF_SEEDS_IN_PARALLEL=32 BLC_SEEDCOMMIT_CACHE=1 BLC_SEEDEXPAND_CACHE=1 BENCHMARK=0 make firmware
+```
+
+And for the L1 Fast instance with tweaked Pow:
+
+```console
+make clean && BOARD=nucleol4r5zi PRESIGN_TEST=1 MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-fast-r5 USE_PRG_CACHE=1 USE_PIOP_CACHE=0 MEMORY_EFFICIENT_PIOP=0 PIOP_BITSLICE=1 FIELDS_BITSLICE_COMPOSITE=1 FIELDS_BITSLICE_PUBLIC_JUMP=1 MEMORY_EFFICIENT_BLC=1 MEMORY_EFFICIENT_KEYGEN=1 RIJNDAEL_OPT_ARMV7M=1 USE_GF256_TABLE_LOG_EXP=0" RIJNDAEL_BITSLICE=1 RIJNDAEL_TABLE=0 RIJNDAEL_EXTERNAL=0 USE_ENC_CTX_CLEANSING=0 USE_ENC_X8=0 USE_XOF_X4=0 BLC_INTERNAL_X2=0 GGMTREE_NB_ENC_CTX_IN_MEMORY=0 NO_EXPANDMQ_PRG_CACHE=1 GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG=5 BLC_NB_LEAF_SEEDS_IN_PARALLEL=32 BLC_SEEDCOMMIT_CACHE=1 BLC_SEEDEXPAND_CACHE=1 BENCHMARK=0 EXTRA_CFLAGS="-DWITH_LOW_POW" make firmware
+```
+
 
 **NOTE1:** there is no "Faster" instance for the pre-signature experiments.
 
@@ -552,9 +630,9 @@ The resulting benchmarks should be the following:
 
 | Scheme                           | Sig. Size | Pre. Size | Offline (Mc) | Online (Mc) |
 |----------------------------------|-----------|-----------|---------|--------|
-| MQOM F16 Short R5                | 2 916 B   | 464 B     | 305     | 3.84   |
-| MQOM F16 Short R5 – LowPoW       | 3 152 B   | 492 B     | 350     | 0.90   |
-| MQOM F16 Fast R5                 | 3 328 B   | 604 B     | 69.8    | 6.91   |
-| MQOM F16 Fast R5 – LowPoW        | 3 516 B   | 632 B     | 70.0    | 0.98   |
+| MQOM F16 Short R5                | 2 916 B   | 464 B     | 288     | 3.84   |
+| MQOM F16 Short R5 – LowPoW       | 3 152 B   | 492 B     | 309     | 0.91   |
+| MQOM F16 Fast R5                 | 3 328 B   | 604 B     | 66.4    | 6.91   |
+| MQOM F16 Fast R5 – LowPoW        | 3 516 B   | 632 B     | 69.3    | 0.98   |
 
 

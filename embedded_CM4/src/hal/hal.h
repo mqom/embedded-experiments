@@ -24,6 +24,9 @@
 #include <libopencm3/stm32/flash.h>
 #include <libopencm3/stm32/rng.h>
 #include <libopencm3/stm32/pwr.h>
+#include <libopencm3/stm32/dma.h>
+
+#include "cryp_dma.h"
 
 #if defined(STM32F407VG)
 #define SERIAL_GPIO GPIOA
@@ -85,7 +88,9 @@ void hal_sleep(uint32_t t);
 
 #ifdef LEIA_BOARD
 void hal_cryp_aes_128_set_key(const uint8_t key[16]);
+void hal_cryp_aes_128_set_key_dma(const uint8_t key[16]);
 void hal_cryp_aes_128_enc(const uint8_t *pt, uint8_t *ct, uint32_t sz);
+void hal_cryp_aes_128_enc_dma(const uint8_t *pt, uint8_t *ct, uint32_t sz);
 void hal_cryp_aes_256_set_key(const uint8_t key[32]);
 void hal_cryp_aes_256_enc(const uint8_t *pt, uint8_t *ct, uint32_t sz);
 #endif

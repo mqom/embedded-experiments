@@ -20,6 +20,8 @@
 #define enc_ctx_pub_x4 rijndael_ctx_aes128_pub_x4
 #define enc_ctx_x8 rijndael_ctx_aes128_x8
 #define enc_ctx_pub_x8 rijndael_ctx_aes128_pub_x8
+#define enc_ctx_ecb rijndael_ctx_aes128_ecb
+#define enc_ctx_pub_ecb rijndael_ctx_aes128_pub_ecb
 
 static inline int enc_key_sched(enc_ctx *ctx, const uint8_t key[16]) {
 	int ret;
@@ -74,6 +76,20 @@ static inline int enc_key_sched_pub_x8(enc_ctx_pub_x8 *ctx, const uint8_t key1[1
 	int ret;
 	MQOM2_SYM_MEASURE_PRE
 	ret = aes128_setkey_enc_pub_x8(ctx, key1, key2, key3, key4, key5, key6, key7, key8);
+	MQOM2_SYM_MEASURE_POST
+	return ret;
+}
+static inline int enc_key_sched_ecb(enc_ctx_ecb *ctx, const uint8_t key[16]) {
+	int ret;
+	MQOM2_SYM_MEASURE_PRE
+	ret = aes128_setkey_enc_ecb(ctx, key);
+	MQOM2_SYM_MEASURE_POST
+	return ret;
+}
+static inline int enc_key_sched_pub_ecb(enc_ctx_pub_ecb *ctx, const uint8_t key[16]) {
+	int ret;
+	MQOM2_SYM_MEASURE_PRE
+	ret = aes128_setkey_enc_pub_ecb(ctx, key);
 	MQOM2_SYM_MEASURE_POST
 	return ret;
 }
@@ -206,6 +222,20 @@ static inline int enc_encrypt_x8_pub_x8(const enc_ctx_pub_x8 *ctx,
         MQOM2_SYM_MEASURE_POST
         return ret;
 }
+static inline int enc_encrypt_ecb(const enc_ctx_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out) {
+	int ret = 0;
+	MQOM2_SYM_MEASURE_PRE
+	ret = aes128_enc_ecb(ctx, nblocks, in, out);
+	MQOM2_SYM_MEASURE_POST
+	return ret;
+}
+static inline int enc_encrypt_pub_ecb(const enc_ctx_pub_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out) {
+	int ret = 0;
+	MQOM2_SYM_MEASURE_PRE
+	ret = aes128_enc_pub_ecb(ctx, nblocks, in, out);
+	MQOM2_SYM_MEASURE_POST
+	return ret;
+}
 
 
 /* ===================================== */
@@ -223,6 +253,8 @@ static inline int enc_encrypt_x8_pub_x8(const enc_ctx_pub_x8 *ctx,
 #define enc_ctx_pub_x4 rijndael_ctx_rijndael256_pub_x4
 #define enc_ctx_x8 rijndael_ctx_rijndael256_x8
 #define enc_ctx_pub_x8 rijndael_ctx_rijndael256_pub_x8
+#define enc_ctx_ecb rijndael_ctx_rijndael256_ecb
+#define enc_ctx_pub_ecb rijndael_ctx_rijndael256_pub_ecb
 
 /* Specifically for 192 bits, we need to adapt the underlying calls
  * as we use Rijndael-256-256 with expansion and truncation
@@ -410,6 +442,37 @@ err:
 	MQOM2_SYM_MEASURE_POST
 	return ret;
 }
+static inline int enc_key_sched_ecb(enc_ctx_ecb *ctx, const uint8_t key[24]) {
+	int ret = -1;
+
+	MQOM2_SYM_MEASURE_PRE
+	uint8_t exp_key[32] = { 0 };
+	memcpy(exp_key, key, 24);
+
+	ret = rijndael256_setkey_enc_ecb(ctx, exp_key);
+	ERR(ret, err);
+
+	ret = 0;
+err:
+	MQOM2_SYM_MEASURE_POST
+	return ret;
+}
+static inline int enc_key_sched_pub_ecb(enc_ctx_pub_ecb *ctx, const uint8_t key[24]) {
+	int ret = -1;
+
+	MQOM2_SYM_MEASURE_PRE
+	uint8_t exp_key[32] = { 0 };
+	memcpy(exp_key, key, 24);
+
+	ret = rijndael256_setkey_enc_pub_ecb(ctx, exp_key);
+	ERR(ret, err);
+
+	ret = 0;
+err:
+	MQOM2_SYM_MEASURE_POST
+	return ret;
+}
+
 
 static inline int enc_encrypt(const enc_ctx *ctx, const uint8_t pt[24], uint8_t ct[24]) {
 	int ret = -1;
@@ -807,6 +870,60 @@ err:
 	MQOM2_SYM_MEASURE_POST
 	return ret;
 }
+static inline int enc_encrypt_ecb(const enc_ctx_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out) {
+	int ret = -1;
+	unsigned int i;
+
+	MQOM2_SYM_MEASURE_PRE
+	/* XXX: FIXME: this uses VLAs for now ... which is really bad. To be fixed 
+ 	 * whenever we have a cleaner solution.
+ 	 * */
+	uint8_t exp_pt[nblocks][32], exp_ct[nblocks][32];
+	memset(exp_pt, 0, 32 * nblocks);
+
+	for(i = 0; i < nblocks; i++){
+		memcpy(exp_pt[i], &in[i * 24], 24);
+	}
+
+	ret = rijndael256_enc_ecb(ctx, nblocks, (uint8_t*)exp_pt, (uint8_t*)exp_ct);
+	ERR(ret, err);
+
+	for(i = 0; i < nblocks; i++){
+		memcpy(&out[i * 24], exp_ct[i], 24);
+	}
+
+	ret = 0;
+err:
+	MQOM2_SYM_MEASURE_POST
+	return ret;
+}
+static inline int enc_encrypt_pub_ecb(const enc_ctx_pub_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out) {
+	int ret = -1;
+	unsigned int i;
+
+	MQOM2_SYM_MEASURE_PRE
+	/* XXX: FIXME: this uses VLAs for now ... which is really bad. To be fixed 
+ 	 * whenever we have a cleaner solution.
+ 	 * */
+	uint8_t exp_pt[nblocks][32], exp_ct[nblocks][32];
+	memset(exp_pt, 0, 32 * nblocks);
+
+	for(i = 0; i < nblocks; i++){
+		memcpy(exp_pt[i], &in[i * 24], 24);
+	}
+
+	ret = rijndael256_enc_pub_ecb(ctx, nblocks, (uint8_t*)exp_pt, (uint8_t*)exp_ct);
+	ERR(ret, err);
+
+	for(i = 0; i < nblocks; i++){
+		memcpy(&out[i * 24], exp_ct[i], 24);
+	}
+
+	ret = 0;
+err:
+	MQOM2_SYM_MEASURE_POST
+	return ret;
+}
 
 /* ===================================== */
 /* ===================================== */
@@ -823,6 +940,8 @@ err:
 #define enc_ctx_pub_x4 rijndael_ctx_rijndael256_pub_x4
 #define enc_ctx_x8 rijndael_ctx_rijndael256_x8
 #define enc_ctx_pub_x8 rijndael_ctx_rijndael256_pub_x8
+#define enc_ctx_ecb rijndael_ctx_rijndael256_ecb
+#define enc_ctx_pub_ecb rijndael_ctx_rijndael256_pub_ecb
 
 /* For 256 bits security, we tyransparently use Rijndael-256-256 */
 static inline int enc_key_sched(enc_ctx *ctx, const uint8_t key[32]) {
@@ -928,6 +1047,20 @@ static inline int enc_encrypt_x2_pub_x2(const enc_ctx_pub_x2 *ctx, const uint8_t
 	MQOM2_SYM_MEASURE_POST
 	return ret;
 }
+static inline int enc_key_sched_ecb(enc_ctx_ecb *ctx, const uint8_t key[32]) {
+	int ret;
+	MQOM2_SYM_MEASURE_PRE
+	ret = rijndael256_setkey_enc_ecb(ctx, key);
+	MQOM2_SYM_MEASURE_POST
+	return ret;
+}
+static inline int enc_key_sched_pub_ecb(enc_ctx_pub_ecb *ctx, const uint8_t key[32]) {
+	int ret;
+	MQOM2_SYM_MEASURE_PRE
+	ret = rijndael256_setkey_enc_pub_ecb(ctx, key);
+	MQOM2_SYM_MEASURE_POST
+	return ret;
+}
 
 static inline int enc_encrypt_x4(const enc_ctx *ctx1, const enc_ctx *ctx2, const enc_ctx *ctx3, const enc_ctx *ctx4,
                                  const uint8_t pt1[32], const uint8_t pt2[32], const uint8_t pt3[32], const uint8_t pt4[32],
@@ -1012,10 +1145,29 @@ static inline int enc_encrypt_x8_pub_x8(const enc_ctx_pub_x8 *ctx,
 	MQOM2_SYM_MEASURE_POST
 	return ret;
 }
+static inline int enc_encrypt_ecb(const enc_ctx_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out) {
+	int ret = 0;
+	MQOM2_SYM_MEASURE_PRE
+	ret = rijndael256_enc_ecb(ctx, nblocks, in, out);
+	MQOM2_SYM_MEASURE_POST
+	return ret;
+}
+static inline int enc_encrypt_pub_ecb(const enc_ctx_pub_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out) {
+	int ret = 0;
+	MQOM2_SYM_MEASURE_PRE
+	ret = rijndael256_enc_pub_ecb(ctx, nblocks, in, out);
+	MQOM2_SYM_MEASURE_POST
+	return ret;
+}
 
 #else
 
+/* The only case where we can legitimately end here is if we have 128 bits security
+ * level and override it in another header ... If this is not the case, trigger a
+ * compilation error. */
+#if !defined(MQOM2_SEC128_OVERRIDE)
 #error "Sorry, unsupported security parameters: must be one of 128, 192, 256"
+#endif
 
 #endif
 

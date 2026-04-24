@@ -4,6 +4,10 @@
 #include "mqom2_parameters.h"
 #include "fields.h"
 
+/* Deal with namespacing */
+#define ComputePAlpha_partial_memopt MQOM_NAMESPACE(ComputePAlpha_partial_memopt)
+#define RecomputePAlpha_partial_memopt MQOM_NAMESPACE(RecomputePAlpha_partial_memopt)
+
 #ifndef PIOP_NB_PARALLEL_REPETITIONS_SIGN
 #define PIOP_NB_PARALLEL_REPETITIONS_SIGN MQOM2_PARAM_TAU
 #endif

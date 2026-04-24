@@ -1,7 +1,1 @@
-/*
-This file defines some parameters of the implementation in the parent directory.
-*/
-
-#define KeccakP1600times4_implementation_config "AVX512, all rounds unrolled"
-#define KeccakP1600times4_fullUnrolling
-#define KeccakP1600times4_useAVX512
+../../../mqom_base/sha3/avx512/SIMD512-4-config.h

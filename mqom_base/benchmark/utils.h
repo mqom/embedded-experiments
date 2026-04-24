@@ -6,6 +6,12 @@
 #include "rijndael/rijndael.h"
 #include "fields.h"
 #include "fields_bitsliced.h"
+#include "blc.h"
+
+#ifndef STR
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+#endif
 
 static inline int get_number_of_tests(int argc, char *argv[], int default_value) {
 	int nb_tests = default_value;
@@ -21,11 +27,33 @@ static inline int get_number_of_tests(int argc, char *argv[], int default_value)
 	return nb_tests;
 }
 
+/* Architecture detection */
+#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64) || defined(_M_AMD64)
+#  define COMPILER_PLATFORM "x86_64"
+#elif defined(__i386__) || defined(_M_IX86)
+#  define COMPILER_PLATFORM "x86 (32-bit)"
+#elif defined(__aarch64__)
+#  define COMPILER_PLATFORM "ARM64"
+#elif defined(__arm__)
+#  define COMPILER_PLATFORM "ARM (32-bit)"
+#elif defined(__powerpc64__) || defined(__ppc64__)
+#  define COMPILER_PLATFORM "PowerPC 64"
+#elif defined(__powerpc__) || defined(__ppc__)
+#  define COMPILER_PLATFORM "PowerPC 32"
+#elif defined(__riscv) && (__riscv_xlen == 64)
+#  define COMPILER_PLATFORM "RISC-V 64"
+#elif defined(__riscv) && (__riscv_xlen == 32)
+#  define COMPILER_PLATFORM "RISC-V 32"
+#else
+#  define COMPILER_PLATFORM "unknown"
+#endif
+
 static inline void print_configuration(void) {
 	printf("===== SCHEME CONFIG =====\r\n");
 	printf("[API] Algo Name: " CRYPTO_ALGNAME "\r\n");
 	printf("[API] Algo Version: " CRYPTO_VERSION "\r\n");
 	printf("Instruction Sets:");
+	printf(" [Platform = %s]", COMPILER_PLATFORM);
 #ifdef __SSE__
 	printf(" SSE");
 #endif
@@ -47,6 +75,12 @@ static inline void print_configuration(void) {
 	printf("\r\n");
 
 	printf("Configuration elements:\r\n");
+#if defined(KECCAK_PLATFORM)
+	printf("  Keccak implementation: %s\r\n", STR(KECCAK_PLATFORM));
+#else
+	printf("  Keccak implementation: unkown\r\n");
+#endif
+
 #ifdef MEMORY_EFFICIENT_KEYGEN
 	printf("  Keygen: memopt\r\n");
 #else
@@ -75,42 +109,14 @@ static inline void print_configuration(void) {
 #else
 	printf("  PIOP: default\r\n");
 #endif
-#ifdef MEMORY_EFFICIENT_BLC
-	printf("  BLC: memopt\r\n");
-#if defined(BLC_INTERNAL_X4)
-	printf("    BLC_INTERNAL: X4\r\n");
-#elif defined(BLC_INTERNAL_X2)
-	printf("    BLC_INTERNAL: X2\r\n");
+
+#if defined(USE_PIOP_CACHE) && !defined(MEMORY_EFFICIENT_PIOP)
+	printf("    PIOP cache ON\r\n");
 #else
-	printf("    BLC_INTERNAL: X1\r\n");
-#endif
-#ifdef BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE
-	printf("    BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE %d\r\n", BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE);
-#else
-	printf("    BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE 1 (default)\r\n");
-#endif
-#ifdef GGMTREE_NB_ENC_CTX_IN_MEMORY
-	printf("    GGMTREE_NB_ENC_CTX_IN_MEMORY %d\r\n", GGMTREE_NB_ENC_CTX_IN_MEMORY);
-#else
-	printf("    GGMTREE_NB_ENC_CTX_IN_MEMORY 1 (default)\r\n");
-#endif
-#ifdef SEED_COMMIT_MEMOPT
-	printf("    SEED_COMMIT_MEMOPT activated\r\n");
-#endif
-#else
-	printf("  BLC: default\r\n");
+	printf("    PIOP cache OFF\r\n");
 #endif
 
-#ifdef USE_PRG_CACHE
-	printf("  PRG cache ON\r\n");
-#else
-	printf("  PRG cache OFF\r\n");
-#endif
-#if defined(USE_PIOP_CACHE) && !defined(MEMORY_EFFICIENT_PIOP)
-	printf("  PIOP cache ON\r\n");
-#else
-	printf("  PIOP cache OFF\r\n");
-#endif
+	BLC_PrintConfig();
 
 	printf("  Rijndael implementation: %s\r\n", rijndael_conf);
 	printf("  Rijndael public implementation: %s\r\n", rijndael_conf_pub);

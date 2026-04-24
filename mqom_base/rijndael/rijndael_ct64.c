@@ -190,6 +190,10 @@ WEAK int aes128_ct64_setkey_enc_x8(rijndael_ct64_ctx_aes128_x8 *ctx, const uint8
 	return ret;
 }
 
+WEAK int aes128_ct64_setkey_enc_ecb(rijndael_ct64_ctx_aes128_ecb *ctx, const uint8_t key[16]) {
+	return aes128_ct64_setkey_enc_x2(ctx, key, key);
+}
+
 #else /* !RIJNDAEL_OPT_ARMV7M */
 WEAK int aes128_ct64_setkey_enc(rijndael_ct64_ctx_aes128 *ctx, const uint8_t key[16]) {
 	int ret = -1;
@@ -266,6 +270,10 @@ WEAK int aes128_ct64_setkey_enc_x8(rijndael_ct64_ctx_aes128_x8 *ctx, const uint8
 	ret |= aes128_ct64_setkey_enc_x4(&ctx->ctx2, key5, key6, key7, key8);
 
 	return ret;
+}
+
+WEAK int aes128_ct64_setkey_enc_ecb(rijndael_ct64_ctx_aes128_ecb *ctx, const uint8_t key[16]) {
+	return aes128_ct64_setkey_enc_x4(ctx, key, key, key, key);
 }
 #endif /* !RIJNDAEL_OPT_ARMV7M */
 
@@ -347,6 +355,10 @@ WEAK int aes256_ct64_setkey_enc_x8(rijndael_ct64_ctx_aes256_x8 *ctx, const uint8
 	return ret;
 }
 
+WEAK int aes256_ct64_setkey_enc_ecb(rijndael_ct64_ctx_aes256_ecb *ctx, const uint8_t key[32]) {
+	return aes256_ct64_setkey_enc_x4(ctx, key, key, key, key);
+}
+
 /*** RIJNDAEL-256 set key enc ***/
 WEAK int rijndael256_ct64_setkey_enc(rijndael_ct64_ctx_rijndael256 *ctx, const uint8_t key[32]) {
 	int ret = -1;
@@ -406,6 +418,9 @@ WEAK int rijndael256_ct64_setkey_enc_x8(rijndael_ct64_ctx_rijndael256_x8 *ctx, c
 	return ret;
 }
 
+WEAK int rijndael256_ct64_setkey_enc_ecb(rijndael_ct64_ctx_rijndael256_ecb *ctx, const uint8_t key[32]) {
+	return rijndael256_ct64_setkey_enc_x2(ctx, key, key);
+}
 
 // === AES-128 enc
 #if defined(RIJNDAEL_OPT_ARMV7M)
@@ -486,6 +501,27 @@ WEAK int aes128_ct64_enc_x4_x4(const rijndael_ct64_ctx_aes128_x4 *ctx, const uin
 	int ret = 0;
 	ret |= aes128_ct64_enc_x2_x2(&ctx->ctx1, plainText1, plainText2, cipherText1, cipherText2);
 	ret |= aes128_ct64_enc_x2_x2(&ctx->ctx2, plainText3, plainText4, cipherText3, cipherText4);
+	return ret;
+}
+
+WEAK int aes128_ct64_enc_ecb(const rijndael_ct64_ctx_aes128_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out) {
+	int ret = 0;
+	unsigned int i;
+	unsigned int bsize = 16;
+
+	/* The ECB context contains 2 blocks */
+	i = 0;
+	while(i < nblocks){
+		if(((nblocks - i) & 1) == 0){
+			ret |= aes128_ct64_enc_x2_x2(ctx, &in[bsize * i], &in[bsize * (i+1)], &out[bsize * i], &out[bsize * (i+1)]);
+			i += 2;
+		}
+		else{
+			ret |= aes128_ct64_enc_x2_x2(ctx, &in[bsize * i], &in[bsize * i], &out[bsize * i], &out[bsize * i]);
+			i++;
+		}
+	}
+
 	return ret;
 }
 
@@ -583,6 +619,47 @@ WEAK int aes128_ct64_enc_x4_x4(const rijndael_ct64_ctx_aes128_x4 *ctx, const uin
 err:
 	return ret;
 }
+
+WEAK int aes128_ct64_enc_ecb(const rijndael_ct64_ctx_aes128_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out) {
+	int ret = 0;
+	unsigned int i;
+	unsigned int bsize = 16;
+
+	/* The ECB context contains 4 blocks */
+	i = 0;
+	while(i < nblocks){
+		if(((nblocks - i) & 3) == 0){
+			ret |= aes128_ct64_enc_x4_x4(ctx, &in[bsize * i], &in[bsize * (i+1)], &in[bsize * (i+2)], &in[bsize * (i+3)], &out[bsize * i], &out[bsize * (i+1)], &out[bsize * (i+2)], &out[bsize * (i+3)]);
+			i += 4;
+		}
+		else{
+			unsigned int remain = (nblocks - i);
+			switch(remain){
+				case 1:{
+					ret |= aes128_ct64_enc_x4_x4(ctx, &in[bsize * i], &in[bsize * i], &in[bsize * i], &in[bsize * i], &out[bsize * i], &out[bsize * i], &out[bsize * i], &out[bsize * i]);
+					i += remain;
+					break;
+				}
+				case 2:{
+					ret |= aes128_ct64_enc_x4_x4(ctx, &in[bsize * i], &in[bsize * (i+1)], &in[bsize * i], &in[bsize * (i+1)], &out[bsize * i], &out[bsize * (i+1)], &out[bsize * i], &out[bsize * (i+1)]);
+					i += remain;
+					break;
+				}
+				case 3:{
+					ret |= aes128_ct64_enc_x4_x4(ctx, &in[bsize * i], &in[bsize * (i+1)], &in[bsize * (i+2)], &in[bsize * i], &out[bsize * i], &out[bsize * (i+1)], &out[bsize * (i+3)], &out[bsize * i]);
+					i += remain;
+					break;
+				}
+				default:{
+					break;
+				}
+			}
+		}
+	}
+
+	return ret;
+}
+
 #endif /* !RIJNDAEL_OPT_ARMV7M */
 
 WEAK int aes128_ct64_enc_x8(const rijndael_ct64_ctx_aes128 *ctx1, const rijndael_ct64_ctx_aes128 *ctx2, const rijndael_ct64_ctx_aes128 *ctx3, const rijndael_ct64_ctx_aes128 *ctx4,
@@ -727,6 +804,46 @@ WEAK int aes256_ct64_enc_x8_x8(const rijndael_ct64_ctx_aes256_x8 *ctx,
 	return ret;
 }
 
+WEAK int aes256_ct64_enc_ecb(const rijndael_ct64_ctx_aes256_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out) {
+	int ret = 0;
+	unsigned int i;
+	unsigned int bsize = 16;
+
+	/* The ECB context contains 4 blocks */
+	i = 0;
+	while(i < nblocks){
+		if(((nblocks - i) & 3) == 0){
+			ret |= aes256_ct64_enc_x4_x4(ctx, &in[bsize * i], &in[bsize * (i+1)], &in[bsize * (i+2)], &in[bsize * (i+3)], &out[bsize * i], &out[bsize * (i+1)], &out[bsize * (i+2)], &out[bsize * (i+3)]);
+			i += 4;
+		}
+		else{
+			unsigned int remain = (nblocks - i);
+			switch(remain){
+				case 1:{
+					ret |= aes256_ct64_enc_x4_x4(ctx, &in[bsize * i], &in[bsize * i], &in[bsize * i], &in[bsize * i], &out[bsize * i], &out[bsize * i], &out[bsize * i], &out[bsize * i]);
+					i += remain;
+					break;
+				}
+				case 2:{
+					ret |= aes256_ct64_enc_x4_x4(ctx, &in[bsize * i], &in[bsize * (i+1)], &in[bsize * i], &in[bsize * (i+1)], &out[bsize * i], &out[bsize * (i+1)], &out[bsize * i], &out[bsize * (i+1)]);
+					i += remain;
+					break;
+				}
+				case 3:{
+					ret |= aes256_ct64_enc_x4_x4(ctx, &in[bsize * i], &in[bsize * (i+1)], &in[bsize * (i+2)], &in[bsize * i], &out[bsize * i], &out[bsize * (i+1)], &out[bsize * (i+3)], &out[bsize * i]);
+					i += remain;
+					break;
+				}
+				default:{
+					break;
+				}
+			}
+		}
+	}
+
+	return ret;
+}
+
 // === Rijndael-256 enc
 WEAK int rijndael256_ct64_enc(const rijndael_ct64_ctx_rijndael256 *ctx, const uint8_t data_in[32], uint8_t data_out[32]) {
 	int ret = -1;
@@ -843,6 +960,27 @@ WEAK int rijndael256_ct64_enc_x8_x8(const rijndael_ct64_ctx_rijndael256_x8 *ctx,
 	ret |= rijndael256_ct64_enc_x2_x2(&ctx->ctx2, plainText3, plainText4, cipherText3, cipherText4);
 	ret |= rijndael256_ct64_enc_x2_x2(&ctx->ctx3, plainText5, plainText6, cipherText5, cipherText6);
 	ret |= rijndael256_ct64_enc_x2_x2(&ctx->ctx4, plainText7, plainText8, cipherText7, cipherText8);
+	return ret;
+}
+
+WEAK int rijndael256_ct64_enc_ecb(const rijndael_ct64_ctx_rijndael256_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out) {
+	int ret = 0;
+	unsigned int i;
+	unsigned int bsize = 32;
+
+	/* The ECB context contains 2 blocks */
+	i = 0;
+	while(i < nblocks){
+		if(((nblocks - i) & 1) == 0){
+			ret |= rijndael256_ct64_enc_x2_x2(ctx, &in[bsize * i], &in[bsize * (i+1)], &out[bsize * i], &out[bsize * (i+1)]);
+			i += 2;
+		}
+		else{
+			ret |= rijndael256_ct64_enc_x2_x2(ctx, &in[bsize * i], &in[bsize * i], &out[bsize * i], &out[bsize * i]);
+			i++;
+		}
+	}
+
 	return ret;
 }
 

@@ -40,4 +40,6 @@ int BLC_Serialize_Opening_Key_default(const blc_key_default_t* key, uint8_t preo
 
 int BLC_Deserialize_Opening_Key_default(const uint8_t preopening[MQOM2_PARAM_PREOPENING_SIZE], const uint8_t salt[MQOM2_PARAM_SALT_SIZE], const field_base_elt x[FIELD_BASE_PACKING(MQOM2_PARAM_MQ_N)], blc_key_default_t* key);
 
+void BLC_PrintConfig_default();
+
 #endif /* __BLC_DEFAULT_H__ */

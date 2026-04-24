@@ -116,6 +116,12 @@ err:
 }
 #endif
 
+/* XXX: NOTE: USE_SIGNATURE_BUFFER_AS_TEMP is not compatible with libOQS because
+ * of (non-)cleansing breaking the release of XOF contexts. */
+#if defined(USE_SIGNATURE_BUFFER_AS_TEMP) && defined(libOQS)
+#error "Error: USE_SIGNATURE_BUFFER_AS_TEMP and libOQS are NOT compatible ..."
+#endif
+
 int Sign(const uint8_t sk[MQOM2_SK_SIZE], const uint8_t *msg, unsigned long long mlen, const uint8_t salt[MQOM2_PARAM_SALT_SIZE], const uint8_t mseed[MQOM2_PARAM_SEED_SIZE], uint8_t sig[MQOM2_SIG_SIZE]) {
 	int ret = -1;
 	int e;
@@ -124,7 +130,7 @@ int Sign(const uint8_t sk[MQOM2_SK_SIZE], const uint8_t *msg, unsigned long long
 	blc_key_t key;
 	field_base_elt x[FIELD_BASE_PACKING(MQOM2_PARAM_MQ_N)];
 	/* XXX: alignment of u0 because of aliasing of i_star */
-	ALIGN(sizeof(uint16_t)) field_ext_elt u0[MQOM2_PARAM_TAU][FIELD_EXT_PACKING(MQOM2_PARAM_ETA)];
+	ALIGN(4) field_ext_elt u0[MQOM2_PARAM_TAU][FIELD_EXT_PACKING(MQOM2_PARAM_ETA)];
 	field_ext_elt u1[MQOM2_PARAM_TAU][FIELD_EXT_PACKING(MQOM2_PARAM_ETA)];
 	/* Aliasing to save stack space */
 	field_ext_elt (*alpha0)[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)] = u0;
@@ -157,6 +163,14 @@ int Sign(const uint8_t sk[MQOM2_SK_SIZE], const uint8_t *msg, unsigned long long
         field_ext_elt x0[MQOM2_PARAM_TAU][FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)];
 #endif
 
+#if defined(MQOM2_FOR_LIBOQS)
+	/* XXX: NOTE: aliasing is not compatible with libOQS because of the way internal magic values
+	 * are checked in non constant-time.
+	 * */
+        xof_context xof_ctx_;
+        xof_context *xof_ctx = NULL;
+	xof_ctx = &xof_ctx_;
+#else
 	/* When possible, we alias the xof context to save stack space */
 	xof_context xof_ctx_;
 	xof_context *xof_ctx = NULL;
@@ -166,6 +180,7 @@ int Sign(const uint8_t sk[MQOM2_SK_SIZE], const uint8_t *msg, unsigned long long
 	else{
 		xof_ctx = &xof_ctx_;
 	}
+#endif
 	memset(xof_ctx, 0, sizeof(xof_context));
 
 	/* Parse the secret key */
@@ -190,7 +205,10 @@ int Sign(const uint8_t sk[MQOM2_SK_SIZE], const uint8_t *msg, unsigned long long
 
 	/* Compute P_alpha */
 	__BENCHMARK_START__(BS_PIOP_COMPUTE);
-	ret = ComputePAlpha(com1, x0, u0, u1, x, &sk[0], alpha0, alpha1);
+	ret = ComputePAlpha(com1, (const field_ext_elt (*)[FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)])x0,
+				  (const field_ext_elt (*)[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)])u0,
+				  (const field_ext_elt (*)[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)])u1,
+				  x, &sk[0], alpha0, alpha1);
 	ERR(ret, err);
 	__BENCHMARK_STOP__(BS_PIOP_COMPUTE);
 
@@ -276,8 +294,8 @@ err:
 		xof_clean_ctx(xof_ctx);
 	}
 #else
-	mqom_cleanse((void*)x0, sizeof(x0));
 	xof_clean_ctx(xof_ctx);
+	mqom_cleanse((void*)x0, sizeof(x0));
 #endif
 	mqom_cleanse((void*)u0, sizeof(u0));
 	mqom_cleanse((void*)u1, sizeof(u1));
@@ -297,16 +315,25 @@ int Verify_default(const uint8_t pk[MQOM2_PK_SIZE], const uint8_t *msg, unsigned
 	field_ext_elt y[FIELD_EXT_PACKING(MQOM2_PARAM_MQ_M / MQOM2_PARAM_MU)];
 	field_ext_elt x_eval[MQOM2_PARAM_TAU][FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)];
 
-	/* When possible, we alias the xof context to save stack space */
+#if defined(MQOM2_FOR_LIBOQS)
+	/* XXX: NOTE: aliasing is not compatible with libOQS because of the way internal magic values
+	 * are checked in non constant-time.
+	 * */
         xof_context xof_ctx_;
         xof_context *xof_ctx = NULL;
-        if((MQOM2_PARAM_TAU * FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N) * sizeof(field_ext_elt)) >= sizeof(xof_context)){
-                xof_ctx = (xof_context*)x_eval;
-        }
-        else{
-                xof_ctx = &xof_ctx_;
-        }
-        memset(xof_ctx, 0, sizeof(xof_context));
+	xof_ctx = &xof_ctx_;
+#else
+	/* When possible, we alias the xof context to save stack space */
+	xof_context xof_ctx_;
+	xof_context *xof_ctx = NULL;
+	if((MQOM2_PARAM_TAU * FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N) * sizeof(field_ext_elt)) >= sizeof(xof_context)){
+		xof_ctx = (xof_context*)x_eval;
+	}
+	else{
+		xof_ctx = &xof_ctx_;
+	}
+#endif
+	memset(xof_ctx, 0, sizeof(xof_context));
 
 	/* Parse the public key */
 	memcpy(mseed_eq, &pk[0], 2 * MQOM2_PARAM_SEED_SIZE);
@@ -384,7 +411,9 @@ int Verify_default(const uint8_t pk[MQOM2_PK_SIZE], const uint8_t *msg, unsigned
 	for (e = 0; e < MQOM2_PARAM_TAU; e++) {
 		field_ext_parse(&serialized_alpha1[e * BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_ETA * MQOM2_PARAM_MU)], MQOM2_PARAM_ETA, alpha1[e]);
 	}
-	ret = RecomputePAlpha(com1, alpha1, i_star, x_eval, u_eval, mseed_eq, y, alpha0);
+	ret = RecomputePAlpha(com1, (const field_ext_elt (*)[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)])alpha1, i_star,
+				    (const field_ext_elt (*)[FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)])x_eval,
+				    (const field_ext_elt (*)[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)])u_eval, mseed_eq, y, alpha0);
 	ERR(ret, err);
 
 	/* Hash P_alpha */

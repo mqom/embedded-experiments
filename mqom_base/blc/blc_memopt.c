@@ -1,5 +1,7 @@
 #include "blc_memopt.h"
 #include "ggm_tree.h"
+#include "ggm_tree_incr.h"
+#include "ggm_tree_incr_batch.h"
 #include "benchmark.h"
 #include "seed_commit.h"
 
@@ -22,7 +24,7 @@ int BLC_Commit_memopt(const uint8_t mseed[MQOM2_PARAM_SEED_SIZE], const uint8_t 
 
 	memcpy(key->salt, salt, MQOM2_PARAM_SALT_SIZE);
 
-	xof_context xof_ctx_hash_ls_com;
+	xof_context DECL_VAR(xof_ctx_hash_ls_com);
 	ret = xof_init(&xof_ctx_hash_ls_com);
 	ERR(ret, err);
 	ret = xof_update(&xof_ctx_hash_ls_com, (const uint8_t*) "\x07", 1);
@@ -82,6 +84,7 @@ int BLC_Commit_memopt(const uint8_t mseed[MQOM2_PARAM_SEED_SIZE], const uint8_t 
 
 	ret = 0;
 err:
+	xof_clean_ctx(&xof_ctx_hash_ls_com);
 	return ret;
 }
 
@@ -122,7 +125,7 @@ int BLC_Eval_memopt(const uint8_t salt[MQOM2_PARAM_SALT_SIZE], const uint8_t com
 
 	uint8_t com1_[MQOM2_PARAM_DIGEST_SIZE];
 
-	xof_context xof_ctx_hash_ls_com;
+	xof_context DECL_VAR(xof_ctx_hash_ls_com);
 	ret = xof_init(&xof_ctx_hash_ls_com);
 	ERR(ret, err);
 	ret = xof_update(&xof_ctx_hash_ls_com, (const uint8_t*) "\x07", 1);
@@ -208,5 +211,63 @@ int BLC_Eval_memopt(const uint8_t salt[MQOM2_PARAM_SALT_SIZE], const uint8_t com
 
 	ret = 0;
 err:
+	xof_clean_ctx(&xof_ctx_hash_ls_com);
 	return ret;
+}
+
+void BLC_PrintConfig_memopt() {
+	mqom_print("  BLC: memopt\r\n");
+
+#if defined(BLC_INTERNAL_X4)
+	mqom_print("    BLC_INTERNAL: X4\r\n");
+#elif defined(BLC_INTERNAL_X2)
+	mqom_print("    BLC_INTERNAL: X2\r\n");
+#else
+	mqom_print("    BLC_INTERNAL: X1\r\n");
+#endif
+
+#if defined(BLC_INTERNAL_X4) || defined(BLC_INTERNAL_X2)
+#ifdef BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE
+	mqom_print("    [X2,X4] BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE %d\r\n", BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE);
+#else
+	mqom_print("    [X2,X4] BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE 1 (default)\r\n");
+#endif
+#ifdef SEED_COMMIT_MEMOPT
+	mqom_print("    [X2,X4] SEED_COMMIT_MEMOPT activated\r\n");
+#endif
+#ifdef USE_PRG_CACHE
+	mqom_print("    [X2,X4] PRG cache ON\r\n");
+#else
+	mqom_print("    [X2,X4] PRG cache OFF\r\n");
+#endif
+#endif
+
+#ifdef BLC_NB_LEAF_SEEDS_IN_PARALLEL
+	mqom_print("    [X1] BLC_NB_LEAF_SEEDS_IN_PARALLEL %d\r\n", BLC_NB_LEAF_SEEDS_IN_PARALLEL);
+#else
+	mqom_print("    [X1] BLC_NB_LEAF_SEEDS_IN_PARALLEL 8 (default)\r\n");
+#endif
+#ifdef BLC_SEEDEXPAND_CACHE
+	mqom_print("    [X1] SeedExpand cache ON\r\n");
+#endif
+#ifdef BLC_SEEDCOMMIT_CACHE
+	mqom_print("    [X1] SeedCommit cache ON\r\n");
+#endif
+
+	// GGM Tree
+#ifdef GGM_TREE_NO_BATCHING
+#ifdef BLC_NB_LEAF_SEEDS_IN_PARALLEL
+	mqom_print("    [X1] GGMTREE_NB_PARALLEL_DERIVATIONS_LOG %d\r\n", GGMTREE_NB_PARALLEL_DERIVATIONS_LOG);
+#else
+	mqom_print("    [X1] GGMTREE_NB_PARALLEL_DERIVATIONS_LOG 0 (default)\r\n");
+#endif
+#else
+	mqom_print("    [X1] GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG %d\r\n", GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG);
+#endif
+
+#ifdef GGMTREE_NB_ENC_CTX_IN_MEMORY
+	mqom_print("    GGMTREE_NB_ENC_CTX_IN_MEMORY %d\r\n", GGMTREE_NB_ENC_CTX_IN_MEMORY);
+#else
+	mqom_print("    GGMTREE_NB_ENC_CTX_IN_MEMORY 1 (default)\r\n");
+#endif
 }

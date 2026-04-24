@@ -469,7 +469,7 @@ static void _crypto_set_key(enum crypto_keysize keysize, uint64_t key[])
         	        CRYP_KR(3-i) = SWAP_KEY(key[3-i]);
 	        }
 	}
-
+	
 }
 
 void hal_cryp_aes_128_set_key(const uint8_t key[16])
@@ -479,12 +479,24 @@ void hal_cryp_aes_128_set_key(const uint8_t key[16])
         crypto_set_algorithm(ENCRYPT_AES_ECB);
 }
 
+void hal_cryp_aes_128_set_key_dma(const uint8_t key[16])
+{
+	hal_cryp_aes_128_set_key(key);
+}
+
 void hal_cryp_aes_128_enc(const uint8_t *pt, uint8_t *ct, uint32_t sz)
 {
  	crypto_start();
         crypto_process_block((uint32_t*)pt, (uint32_t*)ct, sz / sizeof(uint32_t));
 	crypto_stop();
 }
+
+void hal_cryp_aes_128_enc_dma(const uint8_t *pt, uint8_t *ct, uint32_t sz)
+{
+	cryp_dma_go(pt, ct, sz);
+	cryp_dma_wait_finished();
+}
+
 
 void hal_cryp_aes_256_set_key(const uint8_t key[32])
 {
@@ -510,6 +522,10 @@ void hal_setup(const enum clock_mode clock)
   led_setup();
   rng_setup();
   systick_setup();
+#if defined(LEIA_BOARD)
+  /* DMA for the CRYP engine */
+  cryp_dma_init();
+#endif
 }
 
 // XXX: optimize this at O0 level to keep accurate stack spraying and checking

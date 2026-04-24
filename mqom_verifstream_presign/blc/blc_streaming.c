@@ -1,19 +1,15 @@
 #include "blc_streaming.h"
 #include "ggm_tree.h"
 #include "benchmark.h"
+#include "blc_memopt_x1.h"
+#include "blc_memopt_x1_folding.h"
+#include "blc_memopt_x1_seedcommit.h"
 
-#ifndef BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE
-/* If not defined by the user, default to 1 */
-#define BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE 1
-#else
-#if BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE > MQOM2_PARAM_NB_EVALS
-#error "Error, BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE should be smaller (or equal) to MQOM2_PARAM_NB_EVALS"
-#endif
+#include "ggm_tree_incr_batch.h"
+#if GGMTREE_NB_SIMULTANEOUS_LEAVES % BLC_NB_LEAF_SEEDS_IN_PARALLEL != 0
+#error BLC_NB_LEAF_SEEDS_IN_PARALLEL should divide GGMTREE_NB_SIMULTANEOUS_LEAVES.
 #endif
 
-/* SeedCommit variants
- * NOTE: we factorize the key schedule, the tweaked salt is inside the encryption context
- */
 static inline void SeedCommit(enc_ctx *ctx1, enc_ctx *ctx2, const uint8_t seed[MQOM2_PARAM_SEED_SIZE], uint8_t seed_com[2 * MQOM2_PARAM_SEED_SIZE]) {
 	uint8_t linortho_seed[MQOM2_PARAM_SEED_SIZE];
 	LinOrtho(seed, linortho_seed);
@@ -27,131 +23,66 @@ static inline void SeedCommit(enc_ctx *ctx1, enc_ctx *ctx2, const uint8_t seed[M
 
 int BLC_Commit_x1_streaming(uint32_t e, const uint8_t rseed[MQOM2_PARAM_SEED_SIZE], const uint8_t salt[MQOM2_PARAM_SALT_SIZE], const field_base_elt x[FIELD_BASE_PACKING(MQOM2_PARAM_MQ_N)], uint8_t com[MQOM2_PARAM_DIGEST_SIZE], blc_key_streaming_x1_t* key, field_ext_elt x0[FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)], field_ext_elt u0[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)], field_ext_elt u1[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)]) {
 	int ret = -1;
-	uint32_t i;
-	prg_key_sched_cache* prg_cache = NULL;
+	uint32_t i, i_;
+
+	uint8_t lseeds[GGMTREE_NB_SIMULTANEOUS_LEAVES][MQOM2_PARAM_SEED_SIZE];
+	ggmtree_ctx_batch_t DECL_VAR(ggm_tree);
+	folding_sign_t folding;
+	seedcommit_sign_ctx_t DECL_VAR(seedcommit_ctx);
 
 	/* Compute delta */
 	uint8_t delta[MQOM2_PARAM_SEED_SIZE];
 	DeriveDelta(x, delta);
 
-	xof_context xof_ctx_hash_ls_com;
-	ret = xof_init(&xof_ctx_hash_ls_com);
-	ERR(ret, err);
-	ret = xof_update(&xof_ctx_hash_ls_com, (const uint8_t*) "\x07", 1);
-	ERR(ret, err);
-
-	enc_ctx ctx_seed_commit1, ctx_seed_commit2;
-	uint8_t lseed[MQOM2_PARAM_SEED_SIZE];
-	uint8_t ls_com[BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE][MQOM2_PARAM_DIGEST_SIZE];
-	uint8_t exp[BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N) + BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_ETA)];
-	field_base_elt bar_x[FIELD_BASE_PACKING(MQOM2_PARAM_MQ_N)];
-	field_ext_elt bar_u[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)];
-	field_ext_elt tmp_n[FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)];
-	field_ext_elt tmp_eta[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)];
-	field_base_elt acc_x[FIELD_BASE_PACKING(MQOM2_PARAM_MQ_N)];
-	uint8_t data_folding[MQOM2_PARAM_NB_EVALS_LOG][BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N) + BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_ETA)];
-	uint8_t acc[BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N) + BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_ETA)];
-	xof_context xof_ctx;
-	ggmtree_ctx_t ggm_tree;
-	uint8_t tweaked_salt[MQOM2_PARAM_SALT_SIZE];
-
-	/* Initialize the PRG cache when used */
-#ifndef NO_BLC_PRG_CACHE
-	prg_cache = init_prg_cache(PRG_BLC_SIZE);
-#endif
-
+	// Initialize the GGM tree
 	__BENCHMARK_START__(BS_BLC_EXPAND_TREE);
 	memcpy(key->rseed, rseed, MQOM2_PARAM_SEED_SIZE);
-	ret = GGMTree_InitIncrementalExpansion(&ggm_tree, salt, rseed, delta, e);
-	ERR(ret, err);
+	ret = GGMTree_InitIncrementalExpansion_batch(&ggm_tree, salt, rseed, delta, e);
 	__BENCHMARK_STOP__(BS_BLC_EXPAND_TREE);
 
-	__BENCHMARK_START__(BS_BLC_SEED_COMMIT);
-	TweakSalt(salt, tweaked_salt, 0, e, 0);
-	ret = enc_key_sched(&ctx_seed_commit1, tweaked_salt);
+	// Initialize the hash context
+	ret = init_seedcommit_sign(&seedcommit_ctx, salt, e);
 	ERR(ret, err);
-	tweaked_salt[0] ^= 0x01;
-	ret = enc_key_sched(&ctx_seed_commit2, tweaked_salt);
-	ERR(ret, err);
-	__BENCHMARK_STOP__(BS_BLC_SEED_COMMIT);
 
-	__BENCHMARK_START__(BS_BLC_XOF);
-	ret = xof_init(&xof_ctx);
+	ret = InitializeFolding_sign(&folding, salt, e);
 	ERR(ret, err);
-	ret = xof_update(&xof_ctx, (const uint8_t*) "\x06", 1);
-	ERR(ret, err);
-	__BENCHMARK_STOP__(BS_BLC_XOF);
-
-	memset((uint8_t*) data_folding, 0, sizeof(data_folding));
-	memset((uint8_t*) acc, 0, sizeof(acc));
-	for (i = 0; i < MQOM2_PARAM_NB_EVALS; i++) {
-		uint32_t i_mod = i % BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE;
+	for (i = 0; i < MQOM2_PARAM_NB_EVALS; i+= GGMTREE_NB_SIMULTANEOUS_LEAVES) {
+		// Derive the next leaf seeds
 		__BENCHMARK_START__(BS_BLC_EXPAND_TREE);
-		GGMTree_GetNextLeaf(&ggm_tree, lseed);
+		ret = GGMTree_GetNextLeafs_batch(&ggm_tree, lseeds);
+		ERR(ret, err);
 		__BENCHMARK_STOP__(BS_BLC_EXPAND_TREE);
 
-		__BENCHMARK_START__(BS_BLC_PRG);
-		memcpy(exp, lseed, MQOM2_PARAM_SEED_SIZE);
-		ret = PRG(salt, e, lseed, PRG_BLC_SIZE, exp + MQOM2_PARAM_SEED_SIZE, prg_cache);
-		ERR(ret, err);
-		__BENCHMARK_STOP__(BS_BLC_PRG);
-
-		__BENCHMARK_START__(BS_BLC_ARITH);
-		field_base_vect_add(acc, exp, acc, MQOM2_PARAM_MQ_N + MQOM2_PARAM_ETA * MQOM2_PARAM_MU);
-		uint8_t j = get_gray_code_bit_position(i);
-		field_base_vect_add(data_folding[j], acc, data_folding[j], MQOM2_PARAM_MQ_N + MQOM2_PARAM_ETA * MQOM2_PARAM_MU);
-		__BENCHMARK_STOP__(BS_BLC_ARITH);
-
-		__BENCHMARK_START__(BS_BLC_SEED_COMMIT);
-		SeedCommit(&ctx_seed_commit1, &ctx_seed_commit2, lseed, ls_com[i_mod]);
-		__BENCHMARK_STOP__(BS_BLC_SEED_COMMIT);
-
-		if (i_mod == BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE - 1) {
-			__BENCHMARK_START__(BS_BLC_XOF);
-			ret = xof_update(&xof_ctx, (uint8_t*) ls_com, BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE * MQOM2_PARAM_DIGEST_SIZE);
+		for (i_ = 0; i_ < (GGMTREE_NB_SIMULTANEOUS_LEAVES/BLC_NB_LEAF_SEEDS_IN_PARALLEL); i_++) {
+			// Compute the individual commitments for all the seed leafs,
+			// and incrementally hash them.
+			ret = SeedCommitThenAbsorb_sign(&seedcommit_ctx, &lseeds[i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL]);
 			ERR(ret, err);
-			__BENCHMARK_STOP__(BS_BLC_XOF);
+
+			// Expand each seed and accumulate the expanded tapes
+			ret = SeedExpandThenAccumulate_sign(&folding, i + i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL, &lseeds[i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL]);
+			ERR(ret, err);
 		}
 	}
-	/* Invalidate the PRG cache */
-	destroy_prg_cache(prg_cache);
-	prg_cache = NULL;
 
+	// Finalize the folding to get the committed polynomials
 	__BENCHMARK_START__(BS_BLC_ARITH);
-	memset(x0, 0, BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_MQ_N));
-	for (uint32_t j = 0; j < MQOM2_PARAM_NB_EVALS_LOG; j++) {
-		field_base_parse(data_folding[j], MQOM2_PARAM_MQ_N, bar_x);
-		field_ext_base_constant_vect_mult((1 << j), bar_x, tmp_n, MQOM2_PARAM_MQ_N);
-		field_ext_vect_add(x0, tmp_n, x0, MQOM2_PARAM_MQ_N);
-	}
-
-	memset(u0, 0, BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_ETA));
-	for (uint32_t j = 0; j < MQOM2_PARAM_NB_EVALS_LOG; j++) {
-		field_ext_parse(data_folding[j] + BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N), MQOM2_PARAM_ETA, bar_u);
-		field_ext_constant_vect_mult((1 << j), bar_u, tmp_eta, MQOM2_PARAM_ETA);
-		field_ext_vect_add(u0, tmp_eta, u0, MQOM2_PARAM_ETA);
-	}
-
-	field_base_parse(acc, MQOM2_PARAM_MQ_N, acc_x);
-	field_ext_parse(acc + BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N), MQOM2_PARAM_ETA, u1);
-
-	field_base_elt delta_x[FIELD_BASE_PACKING(MQOM2_PARAM_MQ_N)];
-	uint8_t serialized_delta_x[BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N)];
-	field_base_vect_add(x, acc_x, delta_x, MQOM2_PARAM_MQ_N);
-	field_base_serialize(delta_x, MQOM2_PARAM_MQ_N, serialized_delta_x);
-	memcpy(key->partial_delta_x, serialized_delta_x + MQOM2_PARAM_SEED_SIZE, BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N) - MQOM2_PARAM_SEED_SIZE);
+	FinalizeFolding_sign(&folding, x, key->partial_delta_x, x0, u0, u1);
 	__BENCHMARK_STOP__(BS_BLC_ARITH);
 
+	// Get the global commitment digest
 	__BENCHMARK_START__(BS_BLC_XOF);
-	ret = xof_update(&xof_ctx, key->partial_delta_x, BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N) - MQOM2_PARAM_SEED_SIZE);
+	ret = xof_update(&seedcommit_ctx.xof_ctx, key->partial_delta_x, BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N) - MQOM2_PARAM_SEED_SIZE);
 	ERR(ret, err);
-	ret = xof_squeeze(&xof_ctx, com, MQOM2_PARAM_DIGEST_SIZE);
+	ret = xof_squeeze(&seedcommit_ctx.xof_ctx, com, MQOM2_PARAM_DIGEST_SIZE);
 	ERR(ret, err);
 	__BENCHMARK_STOP__(BS_BLC_XOF);
 
 	ret = 0;
 err:
-	destroy_prg_cache(prg_cache);
+	seedcommit_sign_clean_ctx(&seedcommit_ctx);
+	ggmtree_ctx_batch_t_clean(&ggm_tree);
+	folding_sign_clean_ctx(&folding);
 	return ret;
 }
 
@@ -188,122 +119,50 @@ err:
 
 int BLC_Eval_x1_streaming(uint32_t e, const uint8_t salt[MQOM2_PARAM_SALT_SIZE], const uint8_t opening[MQOM2_PARAM_OPENING_X1_SIZE], uint16_t i_star, uint8_t com[MQOM2_PARAM_DIGEST_SIZE], field_ext_elt x_eval[FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)], field_ext_elt u_eval[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)]) {
 	int ret = -1;
-	uint32_t i;
+	uint32_t i, i_;
 
-	prg_key_sched_cache *prg_cache = NULL;
-
-	uint8_t tweaked_salt[MQOM2_PARAM_SALT_SIZE];
+	uint8_t lseeds[GGMTREE_NB_SIMULTANEOUS_LEAVES][MQOM2_PARAM_SEED_SIZE];
+	ggmtree_ctx_partial_batch_t DECL_VAR(ggm_tree);
+	folding_verify_t folding;
+	seedcommit_verify_ctx_t DECL_VAR(seedcommit_ctx);
 
 	const uint8_t *path = &opening[0];
 	const uint8_t *out_ls_com = &opening[MQOM2_PARAM_SEED_SIZE * MQOM2_PARAM_NB_EVALS_LOG];
 	const uint8_t *partial_delta_x = &opening[(MQOM2_PARAM_SEED_SIZE * MQOM2_PARAM_NB_EVALS_LOG) + MQOM2_PARAM_DIGEST_SIZE];
 
-	xof_context xof_ctx_hash_ls_com;
-	ret = xof_init(&xof_ctx_hash_ls_com);
-	ERR(ret, err);
-	ret = xof_update(&xof_ctx_hash_ls_com, (const uint8_t*) "\x07", 1);
+	// Initialize the GGM tree
+	ret = GGMTree_InitIncrementalPartialExpansion_batch(&ggm_tree, salt, (const uint8_t(*)[MQOM2_PARAM_SEED_SIZE]) path, e, i_star);
 	ERR(ret, err);
 
-	enc_ctx ctx_seed_commit1, ctx_seed_commit2;
-	uint8_t lseed[MQOM2_PARAM_SEED_SIZE];
-	uint8_t ls_com[BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE][MQOM2_PARAM_DIGEST_SIZE];
-	uint8_t exp[BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N) + BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_ETA)];
-	uint8_t data_folding[MQOM2_PARAM_NB_EVALS_LOG][BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N) + BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_ETA)];
-	uint8_t acc[BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N) + BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_ETA)];
-	field_base_elt bar_x[FIELD_BASE_PACKING(MQOM2_PARAM_MQ_N)];
-	field_ext_elt bar_u[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)];
-	field_ext_elt tmp_n[FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)];
-	field_ext_elt tmp_eta[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)];
-	field_base_elt acc_x[FIELD_BASE_PACKING(MQOM2_PARAM_MQ_N)];
-	xof_context xof_ctx;
-	ggmtree_ctx_partial_t ggm_tree;
-
-	/* Initialize the PRG cache when used */
-#ifndef NO_BLC_PRG_CACHE
-	prg_cache = init_prg_cache(PRG_BLC_SIZE);
-#endif
-
-	ret = GGMTree_InitIncrementalPartialExpansion(&ggm_tree, salt, (uint8_t(*)[MQOM2_PARAM_SEED_SIZE]) path, e, i_star);
+	// Initialize the hash context
+	ret = init_seedcommit_verify(&seedcommit_ctx, salt, e, i_star, out_ls_com);
 	ERR(ret, err);
 
-	TweakSalt(salt, tweaked_salt, 0, e, 0);
-	ret = enc_key_sched(&ctx_seed_commit1, tweaked_salt);
+	ret = InitializeFolding_verify(&folding, salt, e);
 	ERR(ret, err);
-	tweaked_salt[0] ^= 0x01;
-	ret = enc_key_sched(&ctx_seed_commit2, tweaked_salt);
-	ERR(ret, err);
+	for (i = 0; i < MQOM2_PARAM_NB_EVALS; i+= GGMTREE_NB_SIMULTANEOUS_LEAVES) {
+		ret = GGMTree_GetNextLeafsPartial_batch(&ggm_tree, lseeds);
+		ERR(ret, err);
 
-	ret = xof_init(&xof_ctx);
-	ERR(ret, err);
-	ret = xof_update(&xof_ctx, (const uint8_t*) "\x06", 1);
-	ERR(ret, err);
-
-	memset((uint8_t*) data_folding, 0, sizeof(data_folding));
-	memset((uint8_t*) acc, 0, sizeof(acc));
-	for (i = 0; i < MQOM2_PARAM_NB_EVALS; i++) {
-		uint32_t i_mod = i % BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE;
-		GGMTree_GetNextLeafPartial(&ggm_tree, lseed);
-
-		if (i != i_star) {
-			memcpy(exp, lseed, MQOM2_PARAM_SEED_SIZE);
-			ret = PRG(salt, e, lseed, PRG_BLC_SIZE, exp + MQOM2_PARAM_SEED_SIZE, prg_cache);
+		for (i_ = 0; i_ < (GGMTREE_NB_SIMULTANEOUS_LEAVES/BLC_NB_LEAF_SEEDS_IN_PARALLEL); i_++) {
+		ret = SeedCommitThenAbsorb_verify(&seedcommit_ctx, i + i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL, &lseeds[i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL]);
 			ERR(ret, err);
-
-			SeedCommit(&ctx_seed_commit1, &ctx_seed_commit2, lseed, ls_com[i_mod]);
-		} else {
-			memset(exp, 0, MQOM2_PARAM_SEED_SIZE + PRG_BLC_SIZE);
-			memcpy(ls_com[i_mod], out_ls_com, MQOM2_PARAM_DIGEST_SIZE);
-		}
-
-		field_base_vect_add(acc, exp, acc, MQOM2_PARAM_MQ_N + MQOM2_PARAM_ETA * MQOM2_PARAM_MU);
-		uint8_t j = get_gray_code_bit_position(i);
-		field_base_vect_add(data_folding[j], acc, data_folding[j], MQOM2_PARAM_MQ_N + MQOM2_PARAM_ETA * MQOM2_PARAM_MU);
-
-		if (i_mod == BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE - 1) {
-			ret = xof_update(&xof_ctx, (uint8_t*) ls_com, BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE * MQOM2_PARAM_DIGEST_SIZE);
+			ret = SeedExpandThenAccumulate_verify(&folding, i + i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL, &lseeds[i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL], i_star);
 			ERR(ret, err);
 		}
 	}
-	/* Invalidate the PRG cache */
-	destroy_prg_cache(prg_cache);
-	prg_cache = NULL;
+	FinalizeFolding_verify(&folding, i_star, partial_delta_x, x_eval, u_eval);
 
-	field_ext_elt r = get_evaluation_point(i_star);
-
-	field_base_elt delta_x[FIELD_BASE_PACKING(MQOM2_PARAM_MQ_N)];
-	uint8_t serialized_delta_x[BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N)];
-	memset(serialized_delta_x, 0, MQOM2_PARAM_SEED_SIZE);
-	memcpy(serialized_delta_x + MQOM2_PARAM_SEED_SIZE, partial_delta_x, BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N) - MQOM2_PARAM_SEED_SIZE);
-	field_base_parse(serialized_delta_x, MQOM2_PARAM_MQ_N, delta_x);
-
-	memset(x_eval, 0, BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_MQ_N));
-	for (uint32_t j = 0; j < MQOM2_PARAM_NB_EVALS_LOG; j++) {
-		field_base_parse(data_folding[j], MQOM2_PARAM_MQ_N, bar_x);
-		field_ext_base_constant_vect_mult((1 << j), bar_x, tmp_n, MQOM2_PARAM_MQ_N);
-		field_ext_vect_add(x_eval, tmp_n, x_eval, MQOM2_PARAM_MQ_N);
-	}
-	field_base_parse(acc, MQOM2_PARAM_MQ_N, acc_x);
-	field_base_vect_add(acc_x, delta_x, acc_x, MQOM2_PARAM_MQ_N);
-	field_ext_base_constant_vect_mult(r, acc_x, tmp_n, MQOM2_PARAM_MQ_N);
-	field_ext_vect_add(x_eval, tmp_n, x_eval, MQOM2_PARAM_MQ_N);
-
-	memset(u_eval, 0, BYTE_SIZE_FIELD_EXT(MQOM2_PARAM_ETA));
-	for (uint32_t j = 0; j < MQOM2_PARAM_NB_EVALS_LOG; j++) {
-		field_ext_parse(data_folding[j] + BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N), MQOM2_PARAM_ETA, bar_u);
-		field_ext_constant_vect_mult((1 << j), bar_u, tmp_eta, MQOM2_PARAM_ETA);
-		field_ext_vect_add(u_eval, tmp_eta, u_eval, MQOM2_PARAM_ETA);
-	}
-	field_ext_parse(acc + BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N), MQOM2_PARAM_ETA, tmp_eta);
-	field_ext_constant_vect_mult(r, tmp_eta, tmp_eta, MQOM2_PARAM_ETA);
-	field_ext_vect_add(u_eval, tmp_eta, u_eval, MQOM2_PARAM_ETA);
-
-	ret = xof_update(&xof_ctx, partial_delta_x, BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N) - MQOM2_PARAM_SEED_SIZE);
+	ret = xof_update(&seedcommit_ctx.xof_ctx, partial_delta_x, BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_MQ_N) - MQOM2_PARAM_SEED_SIZE);
 	ERR(ret, err);
-	ret = xof_squeeze(&xof_ctx, com, MQOM2_PARAM_DIGEST_SIZE);
+	ret = xof_squeeze(&seedcommit_ctx.xof_ctx, com, MQOM2_PARAM_DIGEST_SIZE);
 	ERR(ret, err);
+
 	ret = 0;
 err:
-	destroy_prg_cache(prg_cache);
+	seedcommit_verify_clean_ctx(&seedcommit_ctx);
+	ggmtree_ctx_partial_batch_t_clean(&ggm_tree);
+	folding_verify_clean_ctx(&folding);
 	return ret;
 }
 
@@ -420,4 +279,36 @@ int BLC_Deserialize_Opening_Key_streaming(const uint8_t preopening[MQOM2_PARAM_P
 	ret = 0;
 err:
 	return ret;
+}
+
+void BLC_PrintConfig_streaming() {
+	printf("  BLC: streaming\r\n");
+#ifdef BLC_NB_LEAF_SEEDS_IN_PARALLEL
+	mqom_print("    BLC_NB_LEAF_SEEDS_IN_PARALLEL %d\r\n", BLC_NB_LEAF_SEEDS_IN_PARALLEL);
+#else
+	mqom_print("    BLC_NB_LEAF_SEEDS_IN_PARALLEL 8 (default)\r\n");
+#endif
+#ifdef BLC_SEEDEXPAND_CACHE
+	mqom_print("    SeedExpand cache ON\r\n");
+#endif
+#ifdef BLC_SEEDCOMMIT_CACHE
+	mqom_print("    SeedCommit cache ON\r\n");
+#endif
+
+	// GGM Tree
+#ifdef GGM_TREE_NO_BATCHING
+#ifdef BLC_NB_LEAF_SEEDS_IN_PARALLEL
+	mqom_print("    GGMTREE_NB_PARALLEL_DERIVATIONS_LOG %d\r\n", GGMTREE_NB_PARALLEL_DERIVATIONS_LOG);
+#else
+	mqom_print("    GGMTREE_NB_PARALLEL_DERIVATIONS_LOG 0 (default)\r\n");
+#endif
+#else
+	mqom_print("    GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG %d\r\n", GGMTREE_NB_SIMULTANEOUS_LEAVES_LOG);
+#endif
+
+#ifdef GGMTREE_NB_ENC_CTX_IN_MEMORY
+	mqom_print("    GGMTREE_NB_ENC_CTX_IN_MEMORY %d\r\n", GGMTREE_NB_ENC_CTX_IN_MEMORY);
+#else
+	mqom_print("    GGMTREE_NB_ENC_CTX_IN_MEMORY 1 (default)\r\n");
+#endif
 }

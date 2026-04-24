@@ -38,6 +38,13 @@
 #define rijndael256_external_enc_x2_x2 MQOM_NAMESPACE(rijndael256_external_enc_x2_x2)
 #define rijndael256_external_enc_x4_x4 MQOM_NAMESPACE(rijndael256_external_enc_x4_x4)
 #define rijndael256_external_enc_x8_x8 MQOM_NAMESPACE(rijndael256_external_enc_x8_x8)
+/**/
+#define aes128_external_setkey_enc_ecb MQOM_NAMESPACE(aes128_external_setkey_enc_ecb)
+#define aes256_external_setkey_enc_ecb MQOM_NAMESPACE(aes256_external_setkey_enc_ecb)
+#define rijndael256_external_setkey_enc_ecb MQOM_NAMESPACE(rijndael256_external_setkey_enc_ecb)
+#define aes128_external_enc_ecb MQOM_NAMESPACE(aes128_external_enc_ecb)
+#define aes256_external_enc_ecb MQOM_NAMESPACE(aes256_external_enc_ecb)
+#define rijndael256_external_enc_ecb MQOM_NAMESPACE(rijndael256_external_enc_ecb)
 
 /* The general Rijndael core context structure: this contains a pointer to an
  * "opaque" structure defined elsewhere */
@@ -55,6 +62,10 @@ typedef struct {
 MAKE_GENERIC_CTX_XX(aes128, external)
 MAKE_GENERIC_CTX_XX(aes256, external)
 MAKE_GENERIC_CTX_XX(rijndael256, external)
+/* ECB contexts */
+MAKE_GENERIC_CTX_ECB(aes128, external)
+MAKE_GENERIC_CTX_ECB(aes256, external)
+MAKE_GENERIC_CTX_ECB(rijndael256, external)
 
 /* ==== Public API ==== */
 int aes128_external_setkey_enc(rijndael_external_ctx_aes128 *ctx, const uint8_t key[16]);
@@ -100,5 +111,9 @@ int rijndael256_external_enc_x8(const rijndael_external_ctx_rijndael256 *ctx1, c
 MAKE_GENERIC_FUNCS_XX_DECL(aes128, external, 16, 16)
 MAKE_GENERIC_FUNCS_XX_DECL(aes256, external, 32, 16)
 MAKE_GENERIC_FUNCS_XX_DECL(rijndael256, external, 32, 32)
+
+MAKE_GENERIC_FUNCS_ECB_DECL(aes128, external, 16, 16)
+MAKE_GENERIC_FUNCS_ECB_DECL(aes256, external, 32, 16)
+MAKE_GENERIC_FUNCS_ECB_DECL(rijndael256, external, 32, 32)
 
 #endif /* __RIJNDAEL_EXTERNAL_H__ */

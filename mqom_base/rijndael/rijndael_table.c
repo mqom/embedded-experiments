@@ -920,6 +920,10 @@ MAKE_GENERIC_FUNCS_XX_IMPL(aes128, table, 16, 16)
 MAKE_GENERIC_FUNCS_XX_IMPL(aes256, table, 32, 16)
 MAKE_GENERIC_FUNCS_XX_IMPL(rijndael256, table, 32, 32)
 
+MAKE_GENERIC_FUNCS_ECB_IMPL(aes128, table, 16, 16)
+MAKE_GENERIC_FUNCS_ECB_IMPL(aes256, table, 32, 16)
+MAKE_GENERIC_FUNCS_ECB_IMPL(rijndael256, table, 32, 32)
+
 #if defined(__GNUC__) && (__GNUC__ >= 11)
 #pragma GCC diagnostic pop
 #endif

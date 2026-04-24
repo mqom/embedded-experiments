@@ -693,15 +693,15 @@ int main(int argc, char *argv[]){
 		t_total_rijndael256_xx8 += (t1_xx - t0_xx);
 	}
 #endif
-	printf("[+] AES-128 X2 encyption performance: %lld cycles\r\n", t_total_aes128_xx2 / (uint64_t)NUM_TESTS_CYCLES);
-	printf("[+] AES-128 X4 encyption performance: %lld cycles\r\n", t_total_aes128_xx4 / (uint64_t)NUM_TESTS_CYCLES);
-	printf("[+] AES-128 X8 encyption performance: %lld cycles\r\n", t_total_aes128_xx8 / (uint64_t)NUM_TESTS_CYCLES);
-	printf("[+] AES-256 X2 encyption performance: %lld cycles\r\n", t_total_aes256_xx2 / (uint64_t)NUM_TESTS_CYCLES);
-	printf("[+] AES-256 X4 encyption performance: %lld cycles\r\n", t_total_aes256_xx4 / (uint64_t)NUM_TESTS_CYCLES);
-	printf("[+] AES-256 X8 encyption performance: %lld cycles\r\n", t_total_aes256_xx8 / (uint64_t)NUM_TESTS_CYCLES);
-	printf("[+] RIJNDAEL-256 X2 encyption performance: %lld cycles\r\n", t_total_rijndael256_xx2 / (uint64_t)NUM_TESTS_CYCLES);
-	printf("[+] RIJNDAEL-256 X4 encyption performance: %lld cycles\r\n", t_total_rijndael256_xx4 / (uint64_t)NUM_TESTS_CYCLES);
-	printf("[+] RIJNDAEL-256 X8 encyption performance: %lld cycles\r\n", t_total_rijndael256_xx8 / (uint64_t)NUM_TESTS_CYCLES);
+	printf("[+] AES-128 X2 encryption performance: %lld cycles\r\n", t_total_aes128_xx2 / (uint64_t)NUM_TESTS_CYCLES);
+	printf("[+] AES-128 X4 encryption performance: %lld cycles\r\n", t_total_aes128_xx4 / (uint64_t)NUM_TESTS_CYCLES);
+	printf("[+] AES-128 X8 encryption performance: %lld cycles\r\n", t_total_aes128_xx8 / (uint64_t)NUM_TESTS_CYCLES);
+	printf("[+] AES-256 X2 encryption performance: %lld cycles\r\n", t_total_aes256_xx2 / (uint64_t)NUM_TESTS_CYCLES);
+	printf("[+] AES-256 X4 encryption performance: %lld cycles\r\n", t_total_aes256_xx4 / (uint64_t)NUM_TESTS_CYCLES);
+	printf("[+] AES-256 X8 encryption performance: %lld cycles\r\n", t_total_aes256_xx8 / (uint64_t)NUM_TESTS_CYCLES);
+	printf("[+] RIJNDAEL-256 X2 encryption performance: %lld cycles\r\n", t_total_rijndael256_xx2 / (uint64_t)NUM_TESTS_CYCLES);
+	printf("[+] RIJNDAEL-256 X4 encryption performance: %lld cycles\r\n", t_total_rijndael256_xx4 / (uint64_t)NUM_TESTS_CYCLES);
+	printf("[+] RIJNDAEL-256 X8 encryption performance: %lld cycles\r\n", t_total_rijndael256_xx8 / (uint64_t)NUM_TESTS_CYCLES);
 
 	// Variants X2X2, X4X4 and X8X8
         uint64_t t_total_aes128_keysched_xx2 = 0, t_total_aes128_keysched_xx4 = 0, t_total_aes128_keysched_xx8 = 0;
@@ -855,23 +855,23 @@ int main(int argc, char *argv[]){
 #endif
 	printf("================\r\n");
  	printf("[+] AES-128 X2 X2 key sched performance: %lld cycles\r\n", t_total_aes128_keysched_xx2 / (uint64_t)NUM_TESTS_CYCLES);
- 	printf("[+] AES-128 X2 X2 encyption performance: %lld cycles\r\n", t_total_aes128_xx2 / (uint64_t)NUM_TESTS_CYCLES);
+ 	printf("[+] AES-128 X2 X2 encryption performance: %lld cycles\r\n", t_total_aes128_xx2 / (uint64_t)NUM_TESTS_CYCLES);
  	printf("[+] AES-128 X4 X4 key sched performance: %lld cycles\r\n", t_total_aes128_keysched_xx4 / (uint64_t)NUM_TESTS_CYCLES);
-	printf("[+] AES-128 X4 X4 encyption performance: %lld cycles\r\n", t_total_aes128_xx4 / (uint64_t)NUM_TESTS_CYCLES);
+	printf("[+] AES-128 X4 X4 encryption performance: %lld cycles\r\n", t_total_aes128_xx4 / (uint64_t)NUM_TESTS_CYCLES);
  	printf("[+] AES-128 X8 X8 key sched performance: %lld cycles\r\n", t_total_aes128_keysched_xx8 / (uint64_t)NUM_TESTS_CYCLES);
 
  	printf("[+] AES-256 X2 X2 key sched performance: %lld cycles\r\n", t_total_aes256_keysched_xx2 / (uint64_t)NUM_TESTS_CYCLES);
- 	printf("[+] AES-256 X2 X2 encyption performance: %lld cycles\r\n", t_total_aes256_xx2 / (uint64_t)NUM_TESTS_CYCLES);
+ 	printf("[+] AES-256 X2 X2 encryption performance: %lld cycles\r\n", t_total_aes256_xx2 / (uint64_t)NUM_TESTS_CYCLES);
  	printf("[+] AES-256 X4 X4 key sched performance: %lld cycles\r\n", t_total_aes256_keysched_xx4 / (uint64_t)NUM_TESTS_CYCLES);
-	printf("[+] AES-256 X4 X4 encyption performance: %lld cycles\r\n", t_total_aes256_xx4 / (uint64_t)NUM_TESTS_CYCLES);
+	printf("[+] AES-256 X4 X4 encryption performance: %lld cycles\r\n", t_total_aes256_xx4 / (uint64_t)NUM_TESTS_CYCLES);
  	printf("[+] AES-256 X8 X8 key sched performance: %lld cycles\r\n", t_total_aes256_keysched_xx8 / (uint64_t)NUM_TESTS_CYCLES);
 
  	printf("[+] RIJNDAEL-256 X2 X2 key sched performance: %lld cycles\r\n", t_total_rijndael256_keysched_xx2 / (uint64_t)NUM_TESTS_CYCLES);
- 	printf("[+] RIJNDAEL-256 X2 X2 encyption performance: %lld cycles\r\n", t_total_rijndael256_xx2 / (uint64_t)NUM_TESTS_CYCLES);
+ 	printf("[+] RIJNDAEL-256 X2 X2 encryption performance: %lld cycles\r\n", t_total_rijndael256_xx2 / (uint64_t)NUM_TESTS_CYCLES);
  	printf("[+] RIJNDAEL-256 X4 X4 key sched performance: %lld cycles\r\n", t_total_rijndael256_keysched_xx4 / (uint64_t)NUM_TESTS_CYCLES);
-	printf("[+] RIJNDAEL-256 X4 X4 encyption performance: %lld cycles\r\n", t_total_rijndael256_xx4 / (uint64_t)NUM_TESTS_CYCLES);
+	printf("[+] RIJNDAEL-256 X4 X4 encryption performance: %lld cycles\r\n", t_total_rijndael256_xx4 / (uint64_t)NUM_TESTS_CYCLES);
  	printf("[+] RIJNDAEL-256 X8 X8 key sched performance: %lld cycles\r\n", t_total_rijndael256_keysched_xx8 / (uint64_t)NUM_TESTS_CYCLES);
-	printf("[+] RIJNDAEL-256 X8 X8 encyption performance: %lld cycles\r\n", t_total_rijndael256_xx8 / (uint64_t)NUM_TESTS_CYCLES);
+	printf("[+] RIJNDAEL-256 X8 X8 encryption performance: %lld cycles\r\n", t_total_rijndael256_xx8 / (uint64_t)NUM_TESTS_CYCLES);
 
 	return 0;
 err:

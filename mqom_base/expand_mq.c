@@ -1,4 +1,7 @@
 #include "expand_mq.h"
+#ifdef SUPERCOP
+#include "crypto_declassify.h"
+#endif
 
 int ExpandEquations_memopt_init(const uint8_t mseed_eq[2 * MQOM2_PARAM_SEED_SIZE], ExpandEquations_ctx *ctx) {
 	int ret = -1;
@@ -6,6 +9,12 @@ int ExpandEquations_memopt_init(const uint8_t mseed_eq[2 * MQOM2_PARAM_SEED_SIZE
 	if ((mseed_eq == NULL) || (ctx == NULL)) {
 		goto err;
 	}
+
+#ifdef SUPERCOP
+        /* Public seed equation declassification for SUPERCOP */
+        crypto_declassify(mseed_eq, 2 * MQOM2_PARAM_SEED_SIZE);
+#endif
+
 	/* Initialize */
 	memcpy(ctx->mseed_eq, mseed_eq, 2 * MQOM2_PARAM_SEED_SIZE);
 	ctx->i = ctx->j = ctx->current_nbytes = 0;
@@ -121,6 +130,11 @@ int ExpandEquations(const uint8_t mseed_eq[2 * MQOM2_PARAM_SEED_SIZE], field_ext
 
 	prg_key_sched_cache_pub *prg_cache = NULL;
 
+#ifdef SUPERCOP
+        /* Public seed equation declassification for SUPERCOP */
+        crypto_declassify(mseed_eq, 2 * MQOM2_PARAM_SEED_SIZE);
+#endif
+
 	/* Compute the number of PRG bytes */
 	nf_eq = MQOM2_PARAM_MQ_N + (MQOM2_PARAM_MQ_N * (MQOM2_PARAM_MQ_N + 1) / 2);
 	nb_eq = nf_eq * FIELD_EXT_LOG2_CARD  / 8;
@@ -139,6 +153,7 @@ int ExpandEquations(const uint8_t mseed_eq[2 * MQOM2_PARAM_SEED_SIZE], field_ext
 
 	/* Generate the equations */
 	i = 0;
+	(void)i;
 #if defined(USE_XOF_X4)
 	/* When using X4 XOF, we check for the proper size */
 	if ((MQOM2_PARAM_MQ_M / MQOM2_PARAM_MU) < 4) {

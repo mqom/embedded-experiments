@@ -521,3 +521,26 @@ err:
 	xof_clean_ctx(&xof_ctx_hash_ls_com);
 	return ret;
 }
+
+void BLC_PrintConfig_onetree_memopt() {
+	printf("  BLC: ONE-TREE memopt\r\n");
+
+#ifdef BLC_ONETREE_NB_PARALLEL_REPETITIONS_SIGN
+	printf("    BLC_ONETREE_NB_PARALLEL_REPETITIONS_SIGN %d\r\n", BLC_ONETREE_NB_PARALLEL_REPETITIONS_SIGN);
+#else
+	printf("    BLC_ONETREE_NB_PARALLEL_REPETITIONS_SIGN %d (default)\r\n", MQOM2_PARAM_TAU);
+#endif
+#ifdef BLC_ONETREE_NB_PARALLEL_REPETITIONS_VERIFY
+	printf("    BLC_ONETREE_NB_PARALLEL_REPETITIONS_VERIFY %d\r\n", BLC_ONETREE_NB_PARALLEL_REPETITIONS_VERIFY);
+#else
+	printf("    BLC_ONETREE_NB_PARALLEL_REPETITIONS_VERIFY %d (default)\r\n", MQOM2_PARAM_TAU);
+#endif
+#ifdef BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE
+	printf("    BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE %d\r\n", BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE);
+#else
+	printf("    BLC_NB_SEED_COMMITMENTS_PER_HASH_UPDATE 1 (default)\r\n");
+#endif
+#ifdef BLC_NO_FAST_FOLDING
+	printf("    BLC_NO_FAST_FOLDING ON\r\n");
+#endif
+}

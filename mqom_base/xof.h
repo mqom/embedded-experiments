@@ -3,6 +3,31 @@
 
 #include "mqom2_parameters.h"
 
+
+/*************************************/
+/********** External *****************/
+/*************************************/
+#if defined(MQOM2_XOF_EXTERNAL_API)
+
+/** Here, the XOF API is defined elsewhere and provided by the user **/
+#include "xof_external.h"
+/**/
+extern int _XOF_Init(Keccak_HashInstance *ctx);
+extern int _XOF_Init_x4(Keccak_HashInstancetimes4 *ctx);
+/**/
+extern int _XOF_Update(Keccak_HashInstance *ctx, const uint8_t* data, size_t byte_len);
+extern int _XOF_Update_x4(Keccak_HashInstancetimes4 *ctx, const uint8_t *data[4], size_t byte_len);
+/**/
+extern int _XOF_Squeeze(Keccak_HashInstance *ctx, uint8_t* data, size_t byte_len);
+extern int _XOF_Squeeze_x4(Keccak_HashInstancetimes4 *ctx, uint8_t *data[4], size_t byte_len);
+/**/
+extern int _XOF_Final(Keccak_HashInstance *ctx, const uint8_t* dummy);
+extern int _XOF_Final_x4(Keccak_HashInstancetimes4 *ctx, const uint8_t* dummy);
+extern void _XOF_Release(Keccak_HashInstance *ctx);
+extern void _XOF_Release_x4(Keccak_HashInstancetimes4 *ctx);
+
+/*** No external XOF API defined, either local, MUPQ or liboqs ***/
+#else
 /*************************************/
 /********** Local ********************/
 /*************************************/
@@ -318,18 +343,24 @@ static inline void _XOF_Release(Keccak_HashInstance *ctx) {
 	if ((ctx != NULL) && (ctx->magic == XOF_CTX_INIT_MAGIC)) {
 		__XOF_Release(&(ctx->ctx));
 	}
-	ctx->magic = 0;
+	if(ctx != NULL){
+		ctx->magic = 0;
+	}
 	return;
 }
 static inline void _XOF_Release_x4(Keccak_HashInstancetimes4 *ctx) {
 	if ((ctx != NULL) && (ctx->magic == XOF_CTX_X4_INIT_MAGIC)) {
 		__XOF_Release_x4(&(ctx->ctx));
 	}
-	ctx->magic = 0;
+	if(ctx != NULL){
+		ctx->magic = 0;
+	}
 	return;
 }
 
 #endif
+#endif /* MQOM2_XOF_EXTERNAL_API */
+
 
 /* Deal with namespacing */
 #define xof_init MQOM_NAMESPACE(xof_init)

@@ -19,6 +19,46 @@
 #endif
 #endif
 
+/* Alignment macro */
+#ifdef ALIGN
+#undef ALIGN
+#endif
+#if defined(__GNUC__)
+#define ALIGN(x) __attribute__ ((aligned(x)))
+#elif defined(_MSC_VER)
+#define ALIGN(x) __declspec(align(x))
+#elif defined(__ARMCC_VERSION)
+#define ALIGN(x) __align(x)
+#else
+#define ALIGN(x)
+#endif
+
+/* Packing macro */
+#ifdef PACKED_BEGIN
+#undef PACKED_BEGIN
+#endif
+#ifdef PACKED_END
+#undef PACKED_END
+#endif
+#if defined(_MSC_VER)
+/* MSVC uses pragmas */
+#define PACKED_BEGIN __pragma(pack(push, 1))
+#define PACKED_END   __pragma(pack(pop))
+#elif defined(__GNUC__) || defined(__clang__)
+/* GCC / Clang */
+#define PACKED_BEGIN
+#define PACKED_END   __attribute__((packed))
+#elif defined(__ARMCC_VERSION)
+/* ARM Compiler */
+#define PACKED_BEGIN
+#define PACKED_END   __packed
+#else
+/* Fallback */
+#define PACKED_BEGIN
+#define PACKED_END
+#endif
+
+
 typedef enum {
 	AES128 = 0, /* Actually Rijndael_128_128 */
 	AES256 = 1, /* Actually Rijndael_128_256  */
@@ -102,6 +142,29 @@ WEAK int aes_alg ## _ ## aes_impl ## _enc_x8_x8(const rijndael_ ## aes_impl ## _
 	int ret = 0; \
 	ret =  aes_alg ## _ ## aes_impl ## _enc_x4_x4((rijndael_ ## aes_impl ## _ctx_ ## aes_alg ## _x4*)&ctx->ctx[0], plainText1, plainText2, plainText3, plainText4, cipherText1, cipherText2, cipherText3, cipherText4); \
 	ret |= aes_alg ## _ ## aes_impl ## _enc_x4_x4((rijndael_ ## aes_impl ## _ctx_ ## aes_alg ## _x4*)&ctx->ctx[4], plainText5, plainText6, plainText7, plainText8, cipherText5, cipherText6, cipherText7, cipherText8); \
+	return ret; \
+}
+
+
+/* Macros to ease dealing with automatic ECB contexts */
+#define MAKE_GENERIC_CTX_ECB(aes_alg, aes_impl) \
+typedef rijndael_ ## aes_impl ## _ctx_ ## aes_alg rijndael_ ## aes_impl ## _ctx_ ## aes_alg ## _ecb; \
+
+#define MAKE_GENERIC_FUNCS_ECB_DECL(aes_alg, aes_impl, szkey, sztext) \
+int aes_alg ## _ ## aes_impl ## _setkey_enc_ecb(rijndael_ ## aes_impl ## _ctx_ ## aes_alg ## _ecb *ctx, const uint8_t key[szkey]); \
+int aes_alg ## _ ## aes_impl ## _enc_ecb(const rijndael_ ## aes_impl ## _ctx_ ## aes_alg ## _ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out);
+
+#define MAKE_GENERIC_FUNCS_ECB_IMPL(aes_alg, aes_impl, szkey, sztext) \
+WEAK int aes_alg ## _ ## aes_impl ## _setkey_enc_ecb(rijndael_ ## aes_impl ## _ctx_ ## aes_alg ## _ecb *ctx, const uint8_t key[szkey]){ \
+	return aes_alg ## _ ## aes_impl ## _setkey_enc(ctx, key); \
+} \
+/* */\
+WEAK int aes_alg ## _ ## aes_impl ## _enc_ecb(const rijndael_ ## aes_impl ## _ctx_ ## aes_alg ## _ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out) { \
+	int ret = 0; \
+	unsigned int i; \
+	for(i = 0; i < nblocks; i++){ \
+		ret |= aes_alg ## _ ## aes_impl ## _enc(ctx, &in[i * sztext], &out[i * sztext]); \
+	} \
 	return ret; \
 }
 

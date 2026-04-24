@@ -310,6 +310,83 @@ static inline uint8_t gf256_vect_mult_ref(const uint8_t *a, const uint8_t *b, ui
 	return (uint8_t)res32;
 }
 
+#if defined(GF256_MULT_X4)
+static inline void gf256_mult4_public_precomputation_ref(uint32_t y_pows[8],uint32_t y) {
+	y_pows[0] = y;
+	y_pows[1] = gf256_lane_xtime_x4(y_pows[0]);
+	y_pows[2] = gf256_lane_xtime_x4(y_pows[1]);
+	y_pows[3] = gf256_lane_xtime_x4(y_pows[2]);
+	y_pows[4] = gf256_lane_xtime_x4(y_pows[3]);
+	y_pows[5] = gf256_lane_xtime_x4(y_pows[4]);
+	y_pows[6] = gf256_lane_xtime_x4(y_pows[5]);
+	y_pows[7] = gf256_lane_xtime_x4(y_pows[6]);
+	return;
+}
+#endif
+
+static inline uint32_t gf256_mult4_public_preprocessed_ref(uint32_t x, const uint32_t y_pows[8]) {
+	uint32_t acc = 0;
+
+#define STEP(i) do { \
+    uint32_t m = ( (x >> (i)) & 0x01010101u ) * 0xFFu; \
+    acc ^= (y_pows[i] & m); \
+} while (0)
+
+	STEP(0);
+	STEP(1);
+	STEP(2);
+	STEP(3);
+	STEP(4);
+	STEP(5);
+	STEP(6);
+	STEP(7);
+
+#undef STEP
+	return acc;
+}
+
+/*
+ * Vector to vector batched multiplication in GF(256).
+ * Takes n+1 vectors a, b[0], ..., b[n-1] of length 'len'
+ * Returns n bytes c[0], ..., c[n-1] (elements in GF(256))
+ *   where c[i] is the vector to vector multiplication between a and b[i]
+ * Assume that a is a non-sensitive vector
+ */
+static inline void gf256_vect_mult_multiple_public_ref(uint8_t* const* c, const uint8_t *a, const uint8_t* const* b, uint32_t len, uint32_t n) {
+	uint32_t i, e;
+
+	for(e = 0; e < n; e++) {
+		*c[e] = 0;
+	}
+
+	i = 0;
+#if defined(GF256_MULT_X4)
+	uint32_t res32;
+	uint32_t a_pows[8];
+	while (i < (4 * (len / 4))) {
+		uint32_t a_;
+		memcpy(&a_, &a[i], 4);
+		gf256_mult4_public_precomputation_ref(a_pows, a_);
+
+		for (e = 0; e < n; e++) {
+			uint32_t b_;
+			memcpy(&b_, &b[e][i], 4);
+			res32 = gf256_mult4_public_preprocessed_ref(b_, a_pows);
+			res32 ^= res32 >> 16;
+			res32 ^= res32 >> 8;
+			*c[e] ^= (uint8_t)res32;
+		}
+		i += 4;
+	}
+#endif
+	while (i < len) {
+		for (e = 0; e < n; e++) {
+			*c[e] ^= gf256_mult_ref(a[i], b[e][i]);
+		}
+		i++;
+	}
+}
+
 /* Matrix and vector multiplication over GF(256)
  * C += A * X, where X is a vector
  * Matrix is supposed to be square n x n, and vector n x 1
@@ -674,6 +751,81 @@ static inline uint16_t gf256to2_vect_mult_ref(const uint16_t *a, const uint16_t 
 #endif
 
 	return (uint16_t)res64;
+}
+
+#if defined(GF256_MULT_X4)
+static inline void gf256to2_mult4_public_precomputation_ref(uint32_t a_pows[24], uint64_t a) {
+	uint32_t a0, a1;
+	a0 = (a & 0xff) | ((a & 0xff0000ull) >> 8) | ((a & 0xff00000000ull) >> 16) | ((a & 0xff000000000000ull) >> 24);
+	a1 = ((a & 0xff00ull) >> 8) | ((a & 0xff000000ull) >> 16) | ((a & 0xff0000000000ull) >> 24) | ((a & 0xff00000000000000ull) >> 32);
+
+	gf256_mult4_public_precomputation_ref(&a_pows[0], a0);
+	gf256_mult4_public_precomputation_ref(&a_pows[8], a1);
+	gf256_mult4_public_precomputation_ref(&a_pows[16], a0 ^ a1);
+	return;
+}
+#endif
+
+#if defined(GF256_MULT_X4)
+static inline uint64_t gf256to2_mult4_public_preprocessed_ref(uint64_t b, const uint32_t a_pows[24]) {
+	uint32_t c0, c1, b0, b1, a1b1, a0b0;
+	uint64_t res;
+
+	b0 = (b & 0xff) | ((b & 0xff0000ull) >> 8) | ((b & 0xff00000000ull) >> 16) | ((b & 0xff000000000000ull) >> 24);
+	b1 = ((b & 0xff00ull) >> 8) | ((b & 0xff000000ull) >> 16) | ((b & 0xff0000000000ull) >> 24) | ((b & 0xff00000000000000ull) >> 32);
+	/**/
+	a1b1 = gf256_mult4_public_preprocessed_ref(b1, &a_pows[8]);
+	a0b0 = gf256_mult4_public_preprocessed_ref(b0, &a_pows[0]);
+	/**/
+	c0 = a0b0 ^ gf256_mult4_ref(a1b1, 0x20202020);
+	c1 = a0b0 ^ gf256_mult4_public_preprocessed_ref(b0 ^ b1, &a_pows[16]);
+
+	res  = ((uint64_t)c0 & 0xff) | ((uint64_t)(c0 & 0xff00) << 8) | ((uint64_t)(c0 & 0xff0000) << 16) | ((uint64_t)(c0 & 0xff000000) << 24);
+	res |= (((uint64_t)c1 & 0xff) << 8) | ((uint64_t)(c1 & 0xff00) << 16) | ((uint64_t)(c1 & 0xff0000) << 24) | ((uint64_t)(c1 & 0xff000000) << 32);
+	return res;
+}
+#endif
+
+/*
+ * Vector to vector batched multiplication in GF(256^2).
+ * Takes n+1 vectors a, b[0], ..., b[n-1] of length 'len'
+ * Returns n double-bytes c[0], ..., c[n-1] (elements in GF(256^2))
+ *   where c[i] is the vector to vector multiplication between a and b[i]
+ * Assume that a is a non-sensitive vector
+ */
+static inline void gf256to2_vect_mult_multiple_public_ref(uint16_t* const* c, const uint16_t *a, const uint16_t* const* b, uint32_t len, uint32_t n) {
+	uint32_t i, e;
+
+	for(e = 0; e < n; e++) {
+		*c[e] = 0;
+	}
+
+	i = 0;
+#if defined(GF256_MULT_X4)
+	uint64_t res64;
+	uint32_t a_pows[24];
+	while (i < (4 * (len / 4))) {
+		uint64_t a_;
+		memcpy(&a_, &a[i], 8);
+		gf256to2_mult4_public_precomputation_ref(a_pows, a_);
+
+		for (e = 0; e < n; e++) {
+			uint64_t b_;
+			memcpy(&b_, &b[e][i], 8);
+			res64 = gf256to2_mult4_public_preprocessed_ref(b_, a_pows);
+			res64 ^= res64 >> 32;
+			res64 ^= res64 >> 16;
+			*c[e] ^= (uint16_t)res64;
+		}
+		i += 4;
+	}
+#endif
+	while (i < len) {
+		for (e = 0; e < n; e++) {
+			*c[e] ^= gf256to2_mult_ref(a[i], b[e][i]);
+		}
+		i++;
+	}
 }
 
 /*

@@ -37,4 +37,6 @@ int BLC_Serialize_Opening_Key_streaming(const blc_key_streaming_t* key, uint8_t 
 
 int BLC_Deserialize_Opening_Key_streaming(const uint8_t preopening[MQOM2_PARAM_PREOPENING_SIZE], const uint8_t salt[MQOM2_PARAM_SALT_SIZE], const field_base_elt x[FIELD_BASE_PACKING(MQOM2_PARAM_MQ_N)], blc_key_streaming_t* key);
 
+void BLC_PrintConfig_streaming();
+
 #endif /* __BLC_STREAMING_H__ */

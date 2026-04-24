@@ -1,5 +1,11 @@
 ### MQOM source related elements
+MQOM2_GIT?=https://github.com/mqom/mqom-v2.git
+MQOM2_BRANCH?=main
+MQOM2_FOLDER_UPSTREAM?=mqom-v2
+MQOM2_FOLDER_UPSTREAM_RELATIVE?=../
+#
 MQOM2_FOLDER=mqom_base
+MQOM2_RELATIVE_FOLDER=../
 ifeq ($(VERIFY_STREAM_TEST),1)
 MQOM2_FOLDER=mqom_verifstream_presign
 endif
@@ -9,37 +15,55 @@ endif
 ifeq ($(ONETREE_TEST),1)
 MQOM2_FOLDER=mqom_onetree
 endif
-MQOM2_RELATIVE_FOLDER=../
+ifeq ($(UPSTREAM),1)
+MQOM2_FOLDER=$(MQOM2_FOLDER_UPSTREAM)
+MQOM2_RELATIVE_FOLDER=$(MQOM2_FOLDER_UPSTREAM_RELATIVE)
+endif
 
 MQOM2_OPTIONS?=MQOM2_VARIANT=cat1-gf16-fast-r5
 
 ### Embedded related elements
-CROSS_CC ?= arm-none-eabi-gcc
-CROSS_AR ?= arm-none-eabi-ar
-CROSS_RANLIB ?= arm-none-eabi-ranlib
+ifeq ($(BOARD),customrv32)
+  # XXX: adding Risc-V is future work
+  CROSS_CC ?= riscv64-unknown-elf-gcc
+  CROSS_AR ?= riscv64-unknown-elf-ar
+  CROSS_RANLIB ?= riscv64-unknown-elf-ranlib
+  EMBEDDED = embedded_RV
+  MCU_CFLAGS=-march=rv32i2p0_mac   -mabi=ilp32 -mtune=size -ggdb3
+else
+  CROSS_CC ?= arm-none-eabi-gcc
+  CROSS_AR ?= arm-none-eabi-ar
+  CROSS_RANLIB ?= arm-none-eabi-ranlib
+  EMBEDDED = embedded_CM4
+  MCU_CFLAGS=-march=armv7e-m -mtune=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16
+endif
+
+COMMON_TESTS=common_tests/
+
+# Force AES polling mode instead of DMA
+ifeq ($(HW_AES_POLL_MODE),1)
+EXTRA_CFLAGS += -DHW_AES_POLL_MODE
+endif
 
 ifeq ($(MAT_MULT_TEST),1)
-  EXTRA_SRC=benchmark/timing.c tests/matmul/bitsliced.c tests/matmul/bitsliced_cond.c tests/matmul/bitsliced_composite.c tests/matmul/bitsliced_composite_cond.c tests/matmul/test_matmul.c $(MQOM2_RELATIVE_FOLDER)/embedded_CM4/platform.c
+  EXTRA_SRC=benchmark/timing.c tests/matmul/bitsliced.c tests/matmul/bitsliced_cond.c tests/matmul/bitsliced_composite.c tests/matmul/bitsliced_composite_cond.c tests/matmul/test_matmul.c $(MQOM2_RELATIVE_FOLDER)/$(COMMON_TESTS)/platform.c
 else
   ifeq ($(RIJNDAEL_TEST),1)
-    EXTRA_CFLAGS += -DEXTERNAL_HAL_GET_CYCLES -DNUM_TESTS_CYCLES=100
-    EXTRA_SRC=benchmark/timing.c  rijndael/tests/test_rijndael.c $(MQOM2_RELATIVE_FOLDER)/embedded_CM4/platform.c $(MQOM2_RELATIVE_FOLDER)/embedded_CM4/mqom2_embedded_aes_hw_override.c
+    EXTRA_CFLAGS += -DEXTERNAL_HAL_GET_CYCLES -DNUM_TESTS_CYCLES=100 -DRIJNDAEL_TEST
+    EXTRA_SRC=benchmark/timing.c  rijndael/tests/test_rijndael.c $(MQOM2_RELATIVE_FOLDER)/$(COMMON_TESTS)/platform.c $(MQOM2_RELATIVE_FOLDER)/$(COMMON_TESTS)/mqom2_embedded_aes_hw_override.c
   else
     ifeq ($(VERIFY_STREAM_TEST),1)
-      EXTRA_SRC=benchmark/timing.c $(MQOM2_RELATIVE_FOLDER)/embedded_CM4/mqom2_embedded_tests_streaming_verif.c $(MQOM2_RELATIVE_FOLDER)/embedded_CM4/platform.c $(MQOM2_RELATIVE_FOLDER)/embedded_CM4/mqom2_embedded_aes_hw_override.c
+      EXTRA_SRC=benchmark/timing.c $(MQOM2_RELATIVE_FOLDER)/$(COMMON_TESTS)/mqom2_embedded_tests_streaming_verif.c $(MQOM2_RELATIVE_FOLDER)/$(COMMON_TESTS)/platform.c $(MQOM2_RELATIVE_FOLDER)/$(COMMON_TESTS)/mqom2_embedded_aes_hw_override.c
     else
       ifeq ($(PRESIGN_TEST),1)
-        EXTRA_SRC=benchmark/timing.c $(MQOM2_RELATIVE_FOLDER)/embedded_CM4/mqom2_embedded_tests_presign.c $(MQOM2_RELATIVE_FOLDER)/embedded_CM4/platform.c $(MQOM2_RELATIVE_FOLDER)/embedded_CM4/mqom2_embedded_aes_hw_override.c
+        EXTRA_SRC=benchmark/timing.c $(MQOM2_RELATIVE_FOLDER)/$(COMMON_TESTS)/mqom2_embedded_tests_presign.c $(MQOM2_RELATIVE_FOLDER)/$(COMMON_TESTS)/platform.c $(MQOM2_RELATIVE_FOLDER)/$(COMMON_TESTS)/mqom2_embedded_aes_hw_override.c
       else
-        EXTRA_SRC=benchmark/timing.c $(MQOM2_RELATIVE_FOLDER)/embedded_CM4/mqom2_embedded_tests.c $(MQOM2_RELATIVE_FOLDER)/embedded_CM4/platform.c $(MQOM2_RELATIVE_FOLDER)/embedded_CM4/mqom2_embedded_aes_hw_override.c
+        EXTRA_SRC=benchmark/timing.c $(MQOM2_RELATIVE_FOLDER)/$(COMMON_TESTS)/mqom2_embedded_tests.c $(MQOM2_RELATIVE_FOLDER)/$(COMMON_TESTS)/platform.c $(MQOM2_RELATIVE_FOLDER)/$(COMMON_TESTS)/mqom2_embedded_aes_hw_override.c
       endif
     endif
   endif
 endif
 
-# Embedded related stuff
-EMBEDDED = embedded_CM4
-MCU_CFLAGS=-march=armv7e-m -mtune=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16
 MCU_CFLAGS+=-DCURRENT_BOARD=$(BOARD)
 # For garbage collecting unused stuff
 MCU_CFLAGS+=-fdata-sections -ffunction-sections
@@ -80,11 +104,14 @@ MQOM2_OPTIONS += USE_WEAK_LOW_LEVEL_API=1
 # Compile the MQOM objects
 # We must have fetched MQOM upstream sources first
 objects:
+ifeq ($(UPSTREAM),1)
+	@if [ ! -d "$(MQOM2_FOLDER)" ]; then echo "[-] The MQOM git folder is not present ... Please fetch it with 'make fetch_mqom_git'!" && false; fi
+endif
 	cd $(MQOM2_FOLDER) && CC="$(CROSS_CC)" AR="$(CROSS_AR)" RANLIB="$(CROSS_RANLIB)" EXTRA_CFLAGS="$(EXTRA_CFLAGS)" BOARD=$(BOARD) EXTRA_SRC="$(EXTRA_SRC)" $(MQOM2_OPTIONS) make
 
 # Compile the minimal firmware for CM4
 firmware: objects
-	cd $(EMBEDDED) && make clean && CC="$(CROSS_CC)" AR="$(CROSS_AR)" RANLIB="$(CROSS_RANLIB)" BOARD=$(BOARD) EXTERNAL_OBJS="$(EXTERNAL_OBJS_EMBEDDED)" make
+	cd $(EMBEDDED) && make clean && CC="$(CROSS_CC)" AR="$(CROSS_AR)" RANLIB="$(CROSS_RANLIB)" BOARD=$(BOARD) EXTERNAL_OBJS="$(EXTERNAL_OBJS_EMBEDDED)" EXTRA_CFLAGS="$(EXTRA_CFLAGS)" make
 
 ocd_reset:
 ifneq ($(BOARD),)
@@ -113,6 +140,11 @@ ifneq ($(BOARD),)
 else
 	@echo "[-] Error: target not available for local compilation ..."
 endif
+
+fetch_mqom_git:
+	@if [ -d "$(MQOM2_FOLDER_UPSTREAM)" ]; then echo "[-] The MQOM git folder seems to be already present ... If you want to fetch it again, remove it!" && false; fi
+	@echo "[+] Fetching MQOM2 source tree from the git ..."
+	git clone -b $(MQOM2_BRANCH) $(MQOM2_GIT)
 
 all: objects
 
@@ -155,7 +187,8 @@ clean:
 	cd mqom_base && make clean
 	cd mqom_verifstream_presign && make clean
 	cd mqom_onetree && make clean
-	rm -f embedded_CM4/mqom2_embedded_tests.o embedded_CM4/mqom2_embedded_tests_streaming_verif.o embedded_CM4/mqom2_embedded_tests_presign.o KAT_ref_tests/KAT_tests.o ./embedded_CM4/mqom2_embedded_aes_hw_override.o ./embedded_CM4/platform.o
+	if [ -d "$(MQOM2_FOLDER_UPSTREAM)" ]; then cd $(MQOM2_FOLDER_UPSTREAM) && make clean; fi
+	rm -f $(COMMON_TESTS)/mqom2_embedded_tests.o $(COMMON_TESTS)/mqom2_embedded_tests_streaming_verif.o $(COMMON_TESTS)/mqom2_embedded_tests_presign.o KAT_ref_tests/KAT_tests.o ./$(COMMON_TESTS)/mqom2_embedded_aes_hw_override.o ./$(COMMON_TESTS)/platform.o
 	find . -name "*.su" -type f -delete
 	find . -name "*.cgraph" -type f -delete
 	cd $(EMBEDDED) && make clean

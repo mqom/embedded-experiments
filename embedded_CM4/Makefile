@@ -24,7 +24,7 @@ CFLAGS  = $(CPU) $(OTHER_OPT) -DCURRENT_BOARD="stm32discovery" -Wall -fno-common
 BOARD_SET=1
 CFLAGS += -DSTM32F407VG -DSTM32F4 -Ilibopencm3/include/ -Isrc/hal
 LDSCRIPT += boards/stm32discoveryf407.ld
-LDFLAGS += -Wl,--gc-sections,-Map=main.map,-cref -T $(LDSCRIPT) $(CPU)
+LDFLAGS += -Wl,--gc-sections,-Map=main.map,-cref,-print-memory-usage -T $(LDSCRIPT) $(CPU)
 LIBS = libopencm3/lib/libopencm3_stm32f4.a
 LIBS_BUILD_CMD = cd libopencm3 && make FP_FLAGS="$(FLOAT_FLAGS)" TARGETS='stm32/f4'
 BOARD_OCD_CFG=boards/stm32f4discovery.cfg
@@ -38,7 +38,7 @@ CFLAGS  = $(CPU) $(OTHER_OPT) -DCURRENT_BOARD="nucleol4r5zi" -Wall -fno-common -
 BOARD_SET=1
 CFLAGS += -DSTM32L4R5ZI -DSTM32L4 -Ilibopencm3/include/ -Isrc/hal
 LDSCRIPT += boards/nucleol4r5zi.ld
-LDFLAGS += -Wl,--gc-sections,-Map=main.map,-cref -T $(LDSCRIPT) $(CPU)
+LDFLAGS += -Wl,--gc-sections,-Map=main.map,-cref,-print-memory-usage -T $(LDSCRIPT) $(CPU)
 LIBS = libopencm3/lib/libopencm3_stm32l4.a
 LIBS_BUILD_CMD = cd libopencm3 && make FP_FLAGS="$(FLOAT_FLAGS)" TARGETS='stm32/l4'
 BOARD_OCD_CFG=boards/nucleol4r5zi.cfg
@@ -52,7 +52,7 @@ CFLAGS  = $(CPU) $(OTHER_OPT) -DCURRENT_BOARD="leia" -Wall -fno-common -fno-stri
 BOARD_SET=1
 CFLAGS += -DSTM32F437 -DSTM32F4 -Ilibopencm3/include/ -Isrc/hal
 LDSCRIPT += boards/stm32discoveryf407.ld
-LDFLAGS += -Wl,--gc-sections,-Map=main.map,-cref -T $(LDSCRIPT) $(CPU)
+LDFLAGS += -Wl,--gc-sections,-Map=main.map,-cref,-print-memory-usage -T $(LDSCRIPT) $(CPU)
 LIBS = libopencm3/lib/libopencm3_stm32f4.a
 LIBS_BUILD_CMD = cd libopencm3 && make FP_FLAGS="$(FLOAT_FLAGS)" TARGETS='stm32/f4'
 BOARD_OCD_CFG=boards/stm32f4discovery.cfg

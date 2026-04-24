@@ -29,4 +29,6 @@ int BLC_Open_memopt(const blc_key_memopt_t* key, const uint16_t i_star[MQOM2_PAR
 
 int BLC_Eval_memopt(const uint8_t salt[MQOM2_PARAM_SALT_SIZE], const uint8_t com1[MQOM2_PARAM_DIGEST_SIZE], const uint8_t opening[MQOM2_PARAM_OPENING_SIZE], const uint16_t i_star[MQOM2_PARAM_TAU], field_ext_elt x_eval[MQOM2_PARAM_TAU][FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)], field_ext_elt u_eval[MQOM2_PARAM_TAU][FIELD_EXT_PACKING(MQOM2_PARAM_ETA)]);
 
+void BLC_PrintConfig_memopt();
+
 #endif /* __BLC_MEMOPT_H__ */

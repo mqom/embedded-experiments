@@ -142,7 +142,9 @@ int Verify_memopt(const uint8_t pk[MQOM2_PK_SIZE], const uint8_t *msg, unsigned 
 			for (e_ = 0; e_ <= e_mod; e_++) {
 				field_ext_parse(&serialized_alpha1[(e - e_mod + e_) * BYTE_SIZE_FIELD_BASE(MQOM2_PARAM_ETA * MQOM2_PARAM_MU)], MQOM2_PARAM_ETA, alpha1[e_]);
 			}
-			ret = RecomputePAlpha_partial_memopt(e_mod + 1, com1, &alpha1[0], &i_star[e - e_mod], x_eval, u_eval, mseed_eq, y, &alpha0[e - e_mod]);
+			ret = RecomputePAlpha_partial_memopt(e_mod + 1, com1, (const field_ext_elt (*)[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)])&alpha1[0],
+							     &i_star[e - e_mod], (const field_ext_elt (*)[FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)])x_eval,
+							     (const field_ext_elt (*)[FIELD_EXT_PACKING(MQOM2_PARAM_ETA)])u_eval, mseed_eq, y, &alpha0[e - e_mod]);
 			ERR(ret, err);
 		}
 	}

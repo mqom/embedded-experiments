@@ -264,6 +264,20 @@ static inline uint8_t gf256_vect_mult_avx512(const uint8_t *a, const uint8_t *b,
 	return sum_uint8_avx512(accu);
 }
 
+/*
+ * Vector to vector batched multiplication in GF(256).
+ * Takes n+1 vectors a, b[0], ..., b[n-1] of length 'len'
+ * Returns n bytes c[0], ..., c[n-1] (elements in GF(256))
+ *   where c[i] is the vector to vector multiplication between a and b[i]
+ * Assume that a is a non-sensitive vector
+ */
+static inline void gf256_vect_mult_multiple_public_avx512(uint8_t* const* c, const uint8_t *a, const uint8_t* const* b, uint32_t len, uint32_t n) {
+	uint32_t i;
+	for (i = 0; i < n; i++) {
+		*c[i] = gf256_vect_mult_avx512(a, b[i], len);
+	}
+}
+
 /* Matrix and vector multiplication over GF(256)
  * C += A * X, where X is a vector
  * Matrix is supposed to be square n x n, and vector n x 1
@@ -616,6 +630,20 @@ static inline uint16_t gf256to2_vect_mult_avx512(const uint16_t *a, const uint16
 	}
 
 	return sum_uint16_avx512(accu);
+}
+
+/*
+ * Vector to vector batched multiplication in GF(256^2).
+ * Takes n+1 vectors a, b[0], ..., b[n-1] of length 'len'
+ * Returns n double-bytes c[0], ..., c[n-1] (elements in GF(256^2))
+ *   where c[i] is the vector to vector multiplication between a and b[i]
+ * Assume that a is a non-sensitive vector
+ */
+static inline void gf256to2_vect_mult_multiple_public_avx512(uint16_t* const* c, const uint16_t *a, const uint16_t* const* b, uint32_t len, uint32_t n) {
+	uint32_t i;
+	for (i = 0; i < n; i++) {
+		*c[i] = gf256to2_vect_mult_avx512(a, b[i], len);
+	}
 }
 
 /*

@@ -35,4 +35,6 @@ int BLC_Open_default(const blc_key_default_t* key, const uint16_t i_star[MQOM2_P
 
 int BLC_Eval_default(const uint8_t salt[MQOM2_PARAM_SALT_SIZE], const uint8_t com1[MQOM2_PARAM_DIGEST_SIZE], const uint8_t opening[MQOM2_PARAM_OPENING_SIZE], const uint16_t i_star[MQOM2_PARAM_TAU], field_ext_elt x_eval[MQOM2_PARAM_TAU][FIELD_EXT_PACKING(MQOM2_PARAM_MQ_N)], field_ext_elt u_eval[MQOM2_PARAM_TAU][FIELD_EXT_PACKING(MQOM2_PARAM_ETA)]);
 
+void BLC_PrintConfig_default();
+
 #endif /* __BLC_DEFAULT_H__ */
