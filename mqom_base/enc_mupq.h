@@ -43,6 +43,10 @@ typedef struct {
         enc_ctx_pub_x4 ctx2;
 } enc_ctx_pub_x8;
 
+/* ECB types correspond to classical types */
+typedef enc_ctx enc_ctx_ecb;
+typedef enc_ctx_pub enc_ctx_pub_ecb;
+
 /* Helpers to interleave two round keys, stolen from https://github.com/aadomn/aes/blob/master/opt32/fixslicing/aes_encrypt.c */
 #define SWAPMOVE(a, b, mask, n) ({                                                      \
         tmp = (b ^ (a >> n)) & mask;                                                    \
@@ -195,6 +199,12 @@ static inline int enc_key_sched_pub_x8(enc_ctx_pub_x8 *ctx, const uint8_t key1[1
 	ret  = enc_key_sched_pub_x4(&ctx->ctx1, key1, key2, key3, key4);
 	ret |= enc_key_sched_pub_x4(&ctx->ctx2, key5, key6, key7, key8);
 	return ret;
+}
+static inline int enc_key_sched_ecb(enc_ctx_ecb *ctx, const uint8_t key[16]) {
+	return enc_key_sched(ctx, key);
+}
+static inline int enc_key_sched_pub_ecb(enc_ctx_pub_ecb *ctx, const uint8_t key[16]) {
+	return enc_key_sched_pub(ctx, key);
 }
 
 static inline int enc_encrypt(const enc_ctx *ctx, const uint8_t pt[16], uint8_t ct[16]) {
@@ -455,6 +465,26 @@ static inline int enc_encrypt_x8_pub_x8(const enc_ctx_pub_x8 *ctx, const uint8_t
 	ret  = enc_encrypt_x4_pub_x4(&ctx->ctx1, pt1, pt2, pt3, pt4, ct1, ct2, ct3, ct4);
 	ret |= enc_encrypt_x4_pub_x4(&ctx->ctx2, pt5, pt6, pt7, pt8, ct5, ct6, ct7, ct8);
 	return ret;
+}
+static inline int enc_encrypt_ecb(const enc_ctx_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out) {
+#if !defined(MQOM2_FOR_MUPQ_AES_GENERIC_KEYSCHEDULE)
+	unsigned int i;
+	uint32_t *rk = (uint32_t*)(&ctx->ctx_pub);
+	uint32_t interleaved_keys[88];
+	/* Transfer the keys from LUT to bitslice */
+	for (i = 0; i < 11; i++) {
+		keys_packing(&interleaved_keys[8 * i], (uint8_t*)&rk[4 * i], (uint8_t*)&rk[4 * i], i);
+	}
+	aes128_ecb(out, in, nblocks, (aes128ctx*)&interleaved_keys);
+#else
+	aes128_ecb(out, in, nblocks, &ctx->ctx_priv);
+#endif
+	return 0;
+
+}
+static inline int enc_encrypt_pub_ecb(const enc_ctx_pub_ecb *ctx, uint32_t nblocks, const uint8_t* in, uint8_t* out) {
+	aes128_ecb_publicinputs(out, in, nblocks, ctx);
+	return 0;
 }
 
 #endif /* __ENC_MUPQ_H__ */

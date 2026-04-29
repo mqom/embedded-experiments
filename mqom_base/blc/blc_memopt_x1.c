@@ -75,11 +75,11 @@ int BLC_Commit_x1_memopt(uint32_t e, const uint8_t rseed[MQOM2_PARAM_SEED_SIZE],
 		for (i_ = 0; i_ < (GGMTREE_NB_SIMULTANEOUS_LEAVES/BLC_NB_LEAF_SEEDS_IN_PARALLEL); i_++) {
 			// Compute the individual commitments for all the seed leafs,
 			// and incrementally hash them.
-			ret = SeedCommitThenAbsorb_sign(&seedcommit_ctx, &lseeds[i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL]);
+			ret = SeedCommitThenAbsorb_sign(&seedcommit_ctx, (const uint8_t (*)[MQOM2_PARAM_SEED_SIZE])&lseeds[i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL]);
 			ERR(ret, err);
 
 			// Expand each seed and accumulate the expanded tapes
-			ret = SeedExpandThenAccumulate_sign(&folding, i + i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL, &lseeds[i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL]);
+			ret = SeedExpandThenAccumulate_sign(&folding, i + i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL, (const uint8_t (*)[MQOM2_PARAM_SEED_SIZE])&lseeds[i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL]);
 			ERR(ret, err);
 		}
 	}
@@ -154,9 +154,9 @@ int BLC_Eval_x1_memopt(uint32_t e, const uint8_t salt[MQOM2_PARAM_SALT_SIZE], co
 		ERR(ret, err);
 
 		for (i_ = 0; i_ < (GGMTREE_NB_SIMULTANEOUS_LEAVES/BLC_NB_LEAF_SEEDS_IN_PARALLEL); i_++) {
-		ret = SeedCommitThenAbsorb_verify(&seedcommit_ctx, i + i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL, &lseeds[i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL]);
+			ret = SeedCommitThenAbsorb_verify(&seedcommit_ctx, i + i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL, (const uint8_t (*)[MQOM2_PARAM_SEED_SIZE])&lseeds[i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL]);
 			ERR(ret, err);
-			ret = SeedExpandThenAccumulate_verify(&folding, i + i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL, &lseeds[i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL], i_star);
+			ret = SeedExpandThenAccumulate_verify(&folding, i + i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL, (const uint8_t (*)[MQOM2_PARAM_SEED_SIZE])&lseeds[i_*BLC_NB_LEAF_SEEDS_IN_PARALLEL], i_star);
 			ERR(ret, err);
 		}
 	}

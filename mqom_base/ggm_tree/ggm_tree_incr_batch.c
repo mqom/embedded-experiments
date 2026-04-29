@@ -96,6 +96,10 @@ static inline enc_ctx_pub_ecb* recover_enc_ctx_pub(const uint8_t* salt, uint32_t
 int GGMTree_InitIncrementalExpansion_batch(ggmtree_ctx_batch_t* ctx, const uint8_t salt[MQOM2_PARAM_SALT_SIZE], const uint8_t rseed[MQOM2_PARAM_SEED_SIZE], const uint8_t delta[MQOM2_PARAM_SEED_SIZE], uint32_t e) {
 	int ret = -1;
 
+	if((ctx == NULL) || (delta == NULL) || (rseed == NULL)){
+		goto err;
+	}
+
 	ret = precompute_enc_ctx(salt, e, ctx->ctx_enc);
 	ERR(ret, err);
 
@@ -145,7 +149,7 @@ int GGMTree_GetNextLeafs_batch(ggmtree_ctx_batch_t* ctx, uint8_t lseeds[][MQOM2_
 
 		// Derive the next node level
 		memcpy(parent_nodes, lseeds, nb_nodes*MQOM2_PARAM_SEED_SIZE);
-		DeriveSeeds_ecb(ctx_enc_ptr, parent_nodes, lseeds, nb_nodes);
+		DeriveSeeds_ecb(ctx_enc_ptr, (const uint8_t (*)[MQOM2_PARAM_SEED_SIZE])parent_nodes, lseeds, nb_nodes);
 		nb_nodes *= 2;
 	}
 
@@ -157,6 +161,10 @@ err:
 
 int GGMTree_InitIncrementalPartialExpansion_batch(ggmtree_ctx_partial_batch_t* ctx, const uint8_t salt[MQOM2_PARAM_SALT_SIZE], const uint8_t path[MQOM2_PARAM_NB_EVALS_LOG][MQOM2_PARAM_SEED_SIZE], uint32_t e, uint32_t i_star) {
 	int ret = -1;
+
+	if((ctx == NULL) || (path == NULL)){
+		goto err;
+	}
 
 	ret = precompute_enc_ctx_pub(salt, e, ctx->ctx_enc);
 	ERR(ret, err);
@@ -216,7 +224,7 @@ int GGMTree_GetNextLeafsPartial_batch(ggmtree_ctx_partial_batch_t* ctx, uint8_t 
 
 		// Derive the next node level
 		memcpy(parent_nodes, lseeds, nb_nodes*MQOM2_PARAM_SEED_SIZE);
-		DeriveSeeds_pub_ecb(ctx_enc_ptr, parent_nodes, lseeds, nb_nodes);
+		DeriveSeeds_pub_ecb(ctx_enc_ptr, (const uint8_t (*)[MQOM2_PARAM_SEED_SIZE])parent_nodes, lseeds, nb_nodes);
 		nb_nodes *= 2;
 
 		// Correct with opening

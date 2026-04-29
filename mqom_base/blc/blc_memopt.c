@@ -215,7 +215,7 @@ err:
 	return ret;
 }
 
-void BLC_PrintConfig_memopt() {
+void BLC_PrintConfig_memopt(void) {
 	mqom_print("  BLC: memopt\r\n");
 
 #if defined(BLC_INTERNAL_X4)

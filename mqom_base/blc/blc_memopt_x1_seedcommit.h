@@ -50,8 +50,10 @@ static inline int init_seedcommit_sign(seedcommit_sign_ctx_t* ctx, const uint8_t
 
 	ret = 0;
 err:
-	xof_clean_ctx(&ctx->xof_ctx);
-	return 0;
+	if(ret){
+		xof_clean_ctx(&ctx->xof_ctx);
+	}
+	return ret;
 }
 
 static inline int init_seedcommit_verify(seedcommit_verify_ctx_t* ctx, const uint8_t salt[MQOM2_PARAM_SALT_SIZE], uint32_t e, uint32_t hidden_index, const uint8_t out_ls_com[MQOM2_PARAM_DIGEST_SIZE]) {
@@ -82,8 +84,10 @@ static inline int init_seedcommit_verify(seedcommit_verify_ctx_t* ctx, const uin
 
 	ret = 0;
 err:
-	xof_clean_ctx(&ctx->xof_ctx);
-	return 0;
+	if(ret){
+		xof_clean_ctx(&ctx->xof_ctx);
+	}
+	return ret;
 }
 
 static inline void seedcommit_sign_clean_ctx(seedcommit_sign_ctx_t* ctx) {

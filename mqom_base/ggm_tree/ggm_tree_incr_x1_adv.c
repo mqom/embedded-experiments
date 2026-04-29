@@ -5,7 +5,9 @@ int GGMTree_InitIncrementalExpansion_adv(ggmtree_ctx_adv_t* ctx, const uint8_t s
 	uint32_t j;
 	int ret = -1;
 	uint8_t tweaked_salt[MQOM2_PARAM_SEED_SIZE];
+#if GGMTREE_NB_PARALLEL_DERIVATIONS_LOG > 0
 	enc_ctx_ecb DECL_VAR(ctx_enc);
+#endif
 
 	for (j = GGMTREE_NB_PARALLEL_DERIVATIONS_LOG+1; j < MQOM2_PARAM_NB_EVALS_LOG; j++) {
 		if (j >= GGMTREE_NB_TWEAKED_SALTS_IN_MEMORY + 1) {
@@ -16,17 +18,19 @@ int GGMTree_InitIncrementalExpansion_adv(ggmtree_ctx_adv_t* ctx, const uint8_t s
 	}
 
 	// Derive the first level of the tree with "2*GGMTREE_NB_PARALLEL_DERIVATIONS" nodes.
-	uint8_t parent_nodes[GGMTREE_NB_PARALLEL_DERIVATIONS][MQOM2_PARAM_SEED_SIZE];
 	memcpy(ctx->path[0][0], rseed, MQOM2_PARAM_SEED_SIZE);
 	xor_blocks(rseed, delta, ctx->path[0][1]);
 
+#if GGMTREE_NB_PARALLEL_DERIVATIONS_LOG > 0
+	uint8_t parent_nodes[GGMTREE_NB_PARALLEL_DERIVATIONS][MQOM2_PARAM_SEED_SIZE];
 	for (j = 1; j <= GGMTREE_NB_PARALLEL_DERIVATIONS_LOG; j++) {
 		memcpy(parent_nodes, ctx->path[0], (1<<j)*MQOM2_PARAM_SEED_SIZE);
 		TweakSalt(salt, tweaked_salt, 2, e, j - 1);
 		ret = enc_key_sched_ecb(&ctx_enc, tweaked_salt);
 		ERR(ret, err);
-		DeriveSeeds_ecb(&ctx_enc, parent_nodes, ctx->path[0], (1<<j));
+		DeriveSeeds_ecb(&ctx_enc, (const uint8_t (*)[MQOM2_PARAM_SEED_SIZE])parent_nodes, ctx->path[0], (1<<j));
 	}
+#endif
 
 	ctx->salt = salt;
 	ctx->e = e;
@@ -34,7 +38,9 @@ int GGMTree_InitIncrementalExpansion_adv(ggmtree_ctx_adv_t* ctx, const uint8_t s
 
 	ret = 0;
 err:
+#if GGMTREE_NB_PARALLEL_DERIVATIONS_LOG > 0
 	enc_clean_ctx_ecb(&ctx_enc);
+#endif
 	return ret;
 }
 
@@ -68,7 +74,7 @@ int GGMTree_GetNextLeaf_adv(ggmtree_ctx_adv_t* ctx, uint8_t lseed[MQOM2_PARAM_SE
 			ctx_enc_ptr = &ctx->ctx_enc[j + GGMTREE_NB_PARALLEL_DERIVATIONS_LOG - GGMTREE_NB_TWEAKED_SALTS_IN_MEMORY];
 		}
 		uint8_t is_right = (ctx->num_leaf >> (MQOM2_PARAM_NB_EVALS_LOG - 1 - j)) & 0x1;
-		DeriveSeeds_ecb(ctx_enc_ptr, &ctx->path[j][GGMTREE_NB_PARALLEL_DERIVATIONS*is_right], ctx->path[j+1], GGMTREE_NB_PARALLEL_DERIVATIONS);
+		DeriveSeeds_ecb(ctx_enc_ptr, (const uint8_t (*)[MQOM2_PARAM_SEED_SIZE])&ctx->path[j][GGMTREE_NB_PARALLEL_DERIVATIONS*is_right], ctx->path[j+1], GGMTREE_NB_PARALLEL_DERIVATIONS);
 	}
 	memcpy(lseed, ctx->path[MQOM2_PARAM_NB_EVALS_LOG-GGMTREE_NB_PARALLEL_DERIVATIONS_LOG-1][ctx->num_leaf & (2*GGMTREE_NB_PARALLEL_DERIVATIONS-1)], MQOM2_PARAM_SEED_SIZE);
 
@@ -82,7 +88,9 @@ int GGMTree_InitIncrementalPartialExpansion_adv(ggmtree_ctx_partial_adv_t* ctx, 
 	uint32_t j;
 	int ret = -1;
 	uint8_t tweaked_salt[MQOM2_PARAM_SEED_SIZE];
+#if GGMTREE_NB_PARALLEL_DERIVATIONS_LOG > 0
 	enc_ctx_pub_ecb DECL_VAR(ctx_enc);
+#endif
 
 	memcpy((uint8_t*) ctx->opening, (uint8_t*) path, sizeof(ctx->opening));
 
@@ -95,22 +103,24 @@ int GGMTree_InitIncrementalPartialExpansion_adv(ggmtree_ctx_partial_adv_t* ctx, 
 	}
 
 	// Derive the first level of the tree with "2*GGMTREE_NB_PARALLEL_DERIVATIONS" nodes.
-	uint8_t parent_nodes[GGMTREE_NB_PARALLEL_DERIVATIONS][MQOM2_PARAM_SEED_SIZE];
 	memset(ctx->path[0][0], 0, 2*MQOM2_PARAM_SEED_SIZE);
 	memcpy(ctx->path[0][(i_star>>(MQOM2_PARAM_NB_EVALS_LOG-1)) ^ 0x01], ctx->opening[MQOM2_PARAM_NB_EVALS_LOG-1], MQOM2_PARAM_SEED_SIZE);
 
+#if GGMTREE_NB_PARALLEL_DERIVATIONS_LOG > 0
+	uint8_t parent_nodes[GGMTREE_NB_PARALLEL_DERIVATIONS][MQOM2_PARAM_SEED_SIZE];
 	for (j = 1; j <= GGMTREE_NB_PARALLEL_DERIVATIONS_LOG; j++) {
 		memcpy(parent_nodes, ctx->path[0], (1<<j)*MQOM2_PARAM_SEED_SIZE);
 		TweakSalt(salt, tweaked_salt, 2, e, j - 1);
 		ret = enc_key_sched_pub_ecb(&ctx_enc, tweaked_salt);
 		ERR(ret, err);
-		DeriveSeeds_pub_ecb(&ctx_enc, parent_nodes, ctx->path[0], (1<<j));
+		DeriveSeeds_pub_ecb(&ctx_enc, (const uint8_t (*)[MQOM2_PARAM_SEED_SIZE])parent_nodes, ctx->path[0], (1<<j));
 
 		// Correct with opening
 		uint32_t hidden_node_idx = (i_star>>(MQOM2_PARAM_NB_EVALS_LOG-1-j));
 		memcpy(ctx->path[0][hidden_node_idx ^ 0x01], ctx->opening[MQOM2_PARAM_NB_EVALS_LOG-1-j], MQOM2_PARAM_SEED_SIZE);
 		memset(ctx->path[0][hidden_node_idx], 0, MQOM2_PARAM_SEED_SIZE);
 	}
+#endif
 
 	ctx->salt = salt;
 	ctx->e = e;
@@ -119,7 +129,9 @@ int GGMTree_InitIncrementalPartialExpansion_adv(ggmtree_ctx_partial_adv_t* ctx, 
 
 	ret = 0;
 err:
+#if GGMTREE_NB_PARALLEL_DERIVATIONS_LOG > 0
 	enc_clean_ctx_pub_ecb(&ctx_enc);
+#endif
 	return ret;
 }
 
@@ -154,7 +166,7 @@ int GGMTree_GetNextLeafPartial_adv(ggmtree_ctx_partial_adv_t* ctx, uint8_t lseed
 			ctx_enc_ptr = &ctx->ctx_enc[j + GGMTREE_NB_PARALLEL_DERIVATIONS_LOG - GGMTREE_NB_TWEAKED_SALTS_IN_MEMORY];
 		}
 		uint8_t is_right = (ctx->num_leaf >> (MQOM2_PARAM_NB_EVALS_LOG - 1 - j)) & 0x1;
-		DeriveSeeds_pub_ecb(ctx_enc_ptr, &ctx->path[j][GGMTREE_NB_PARALLEL_DERIVATIONS*is_right], ctx->path[j+1], GGMTREE_NB_PARALLEL_DERIVATIONS);
+		DeriveSeeds_pub_ecb(ctx_enc_ptr, (const uint8_t (*)[MQOM2_PARAM_SEED_SIZE])&ctx->path[j][GGMTREE_NB_PARALLEL_DERIVATIONS*is_right], ctx->path[j+1], GGMTREE_NB_PARALLEL_DERIVATIONS);
 
 		// Correct with opening
 		if((diff_with_hidden >> (MQOM2_PARAM_NB_EVALS_LOG-1-j)) == 0) {

@@ -470,7 +470,7 @@ err:
 	return ret;
 }
 
-void BLC_PrintConfig_default() {
+void BLC_PrintConfig_default(void) {
 	mqom_print("  BLC: default\r\n");
 
 #ifdef USE_PRG_CACHE

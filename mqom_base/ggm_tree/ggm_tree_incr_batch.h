@@ -23,6 +23,8 @@
 /* Deal with namespacing */
 #define GGMTree_InitIncrementalExpansion_batch MQOM_NAMESPACE(GGMTree_InitIncrementalExpansion_batch)
 #define GGMTree_GetNextLeafs_batch MQOM_NAMESPACE(GGMTree_GetNextLeafs_batch)
+#define GGMTree_InitIncrementalPartialExpansion_batch MQOM_NAMESPACE(GGMTree_InitIncrementalPartialExpansion_batch)
+#define GGMTree_GetNextLeafsPartial_batch MQOM_NAMESPACE(GGMTree_GetNextLeafsPartial_batch)
 
 typedef struct {
 	uint32_t active;
