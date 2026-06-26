@@ -18,6 +18,8 @@ RUN apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=3 update && 
         graphviz \
         libsdl2-dev \
         python3-venv \
+        python3-serial \
+        python3-matplotlib \
         xz-utils \
         ca-certificates \
         stlink-tools \

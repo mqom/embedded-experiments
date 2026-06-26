@@ -873,6 +873,7 @@ int main(int argc, char *argv[]){
  	printf("[+] RIJNDAEL-256 X8 X8 key sched performance: %lld cycles\r\n", t_total_rijndael256_keysched_xx8 / (uint64_t)NUM_TESTS_CYCLES);
 	printf("[+] RIJNDAEL-256 X8 X8 encryption performance: %lld cycles\r\n", t_total_rijndael256_xx8 / (uint64_t)NUM_TESTS_CYCLES);
 
+	printf("END SERIAL COMM\r\n");
 	return 0;
 err:
 	return -1;

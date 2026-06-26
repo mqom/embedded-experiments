@@ -27,6 +27,8 @@ We explain hereafter the various command lines to use for each test to reproduce
   - [About portability of the code across platforms](#about-portability-of-the-code-across-platforms)
   - [Porting to other Cortex-M boards](#porting-to-other-cortex-m-boards)
   - [Using upstream MQOM repo](#using-upstream-mqom-repo)
+  - [Python script for reproduction](#python-script-for-reproduction)
+- [Quick Reproduction Guide](#quick-reproduction-guide)
 - [Rijndael tests](#rijndael-tests)
 - [Matrix Multiplication tests](#matrix-multiplication-tests)
 - [MQOM base optimizations](#mqom-base-optimizations)
@@ -196,7 +198,150 @@ $ make fetch_mqom_git
 **NOTE:** Beware that using the upstream code might break the embedded compilation depending on the included features and your options for MQOM.
 Use `UPSTREAM=1` it knowingly.
 
+### Python script for reproduction
+
+The script [`tools/reproduce_table.py`](tools/reproduce_table.py) automates the
+full pipeline for each paper table or figure: firmware compilation, board
+flashing, UART capture, output parsing, and result formatting.  It requires
+Python 3.8+ and the following packages:
+
+**Required:**
+
+```console
+pip install pyserial
+```
+
+**Optional** — only needed to generate the DMA vs Polling plot (auto-enabled with `--board leia --table rijndael`):
+
+```console
+pip install matplotlib
+```
+
+See the [Quick Reproduction Guide](#quick-reproduction-guide) below for usage
+examples, the full list of `--table` arguments, and instructions for running
+inside Docker or natively.
+
+
+## Quick Reproduction Guide
+
+Run from the repository root (install dependencies first — see
+[Python script for reproduction](#python-script-for-reproduction) above):
+
+```console
+python3 tools/reproduce_table.py --table <TABLE> --port <UART_PORT>
+```
+
+Use `--board leia` if a LEIA board is connected (enables hardware-AES runs and,
+for `--table rijndael`, automatically saves `dma_polling.csv` and
+`dma_polling.png`).  The default is `--board nucleol4r5zi`, which skips all
+LEIA-only runs.
+
+| `--table` argument | Paper Table / Figure | Board(s) needed |
+|--------------------|----------------------|-----------------|
+| `rijndael`   | **Table 1** (AES-128 & Rijndael-256 bitslice/table/HW) + **Figure 3** (DMA vs Polling, `--board leia` only) | Nucleo L4R5ZI; + LEIA with `--board leia` |
+| `matmul`     | **Table 3** (matrix multiplication strategies, all security levels) | Nucleo L4R5ZI |
+| `mqom-l1`    | **Table 4** — L1 security level (LUT / Balanced / Memory / Hardware profiles) | Nucleo L4R5ZI; + LEIA with `--board leia` (HW profile) |
+| `mqom-l3l5`  | **Table 4** — L3 and L5 security levels | Nucleo L4R5ZI |
+| `onetree`    | Table in §"Using One-Tree Technique" | Nucleo L4R5ZI; + LEIA with `--board leia` |
+| `streaming`  | Table in §"Streaming the signature" | Nucleo L4R5ZI |
+| `presign`    | Table in §"Pre-signature" | Nucleo L4R5ZI |
+| `detailed`   | Detailed BLC/PIOP breakdown figure (§"Detailed benchmarks") | Nucleo L4R5ZI; + LEIA with `--board leia` |
+
+List all tables with their descriptions:
+
+```console
+python3 tools/reproduce_table.py --list-tables
+```
+
+Additional flags:
+
+- `--port <UART_PORT>` — serial port of the board. On Linux: `/dev/ttyACM0` (Nucleo) or `/dev/ttyUSB0` (LEIA). On macOS: `/dev/cu.usbmodemXXXX` (use `ls /dev/cu.*` to find it).
+- `--board nucleol4r5zi|leia` — select the connected board (default: `nucleol4r5zi`). With `--board leia`, hardware-AES runs are included; with `--table rijndael`, the DMA vs Polling data (`dma_polling.csv` / `dma_polling.png`) is saved automatically.
+- `--no-compile` / `--no-flash` — skip compilation or flashing when the firmware is already on the board.
+- `--verbose` — print each serial line as it arrives (default: spinner).
+- `--output markdown` — save the formatted table to `<table>-results.md` in addition to printing it.
+
+**Filtering runs** — use `--filter TAG` (repeatable) to run only a subset.
+Tags from the same axis (e.g. two profiles) are OR-ed; tags from different axes (e.g. a level and a profile) are AND-ed.
+List available tags for a table, then apply them:
+
+```console
+python3 tools/reproduce_table.py --table mqom-l1 --list-filters
+# balanced  fast  faster  hardware  l1  lut  memory  short
+
+python3 tools/reproduce_table.py --table mqom-l1 --port /dev/ttyACM0 \
+    --filter lut --filter balanced   # LUT or Balanced, all instances
+python3 tools/reproduce_table.py --table mqom-l1 --port /dev/ttyACM0 \
+    --filter lut --filter faster     # LUT Faster only (AND across axes)
+```
+
+The script compiles each firmware configuration in sequence, flashes it, sends
+`'g'` on the serial port to start the benchmark, reads lines until `END SERIAL
+COMM`, parses the output, and prints the final formatted table.
+
+**Example — reproduce the MQOM L1 benchmarks on a Nucleo L4R5ZI:**
+
+```console
+python3 tools/reproduce_table.py --table mqom-l1 --port /dev/ttyACM0
+```
+
+**Example — reproduce the full Rijndael table including HW AES + DMA/Polling plot (requires LEIA board):**
+
+```console
+python3 tools/reproduce_table.py --table rijndael --port /dev/ttyUSB0 --board leia
+# → dma_polling.csv  (and dma_polling.png if matplotlib is installed)
+```
+
+### Running inside Docker
+
+The Docker environment provides the exact ARM toolchain used for the article.
+`make dev-shell` is for **compilation only** (no USB sharing).
+`make dev-shell-usb` adds USB sharing for **flashing** — Linux hosts only.
+
+```console
+# Compilation + flashing (Linux host with board on USB) — recommended:
+make dev-shell-usb
+# Inside the container:
+python3 tools/reproduce_table.py --table mqom-l1 --port /dev/ttyACM0
+```
+
+`make dev-shell` (without USB sharing) only provides a compilation environment —
+the serial port is not accessible inside the container, so `reproduce_table.py`
+cannot flash or capture UART output. Use it to pre-compile firmwares and then
+flash/run natively, or use `make dev-shell-usb` for the full workflow.
+
+> **Note:** `make dev-shell-usb` requires a Linux host and will fail on macOS
+> or WSL. On macOS, use `make dev-shell` for compilation only, then flash and
+> capture natively with `brew install stlink` and run `reproduce_table.py`
+> outside the container.
+
+> **Disk space:** building the Docker image requires approximately **3–4 GB**
+> of free disk space.
+
+### Running natively (outside Docker)
+
+The benchmarks were produced with **`arm-none-eabi-gcc 14.2.1`** from
+Debian Trixie. Any significant deviation in toolchain version may yield
+different numbers. Install on Debian/Ubuntu:
+
+```console
+apt-get install gcc-arm-none-eabi
+```
+
+> **Note:** compiling `common_tests/platform.c` natively (without the ARM
+> cross-compiler targeting bare-metal newlib) will fail due to a `struct timeval`
+> redefinition. This file is bare-metal firmware code and is not intended for
+> native compilation. Use the Docker environment or the ARM cross-compiler.
+
+
 ## Rijndael tests
+
+> **Automated reproduction (Table 1 + Figure 3):**
+> ```console
+> python3 tools/reproduce_table.py --table rijndael --port /dev/ttyACM0
+> # With LEIA board (adds HW-AES column and DMA/Polling figure):
+> python3 tools/reproduce_table.py --table rijndael --port /dev/ttyUSB0 --board leia
+> ```
 
 In order to reproduce the three main columns of **Table 1** from the article that summarizes the AES-128 and Rijndael-256-256 performance for bitslice/table-based/hardware Rijndael, use the following compilation toggles:
 
@@ -255,6 +400,11 @@ Plotting these number provides Figure 3 of the article:
 
 ## Matrix Multiplication tests
 
+> **Automated reproduction (Table 3):**
+> ```console
+> python3 tools/reproduce_table.py --table matmul --port /dev/ttyACM0
+> ```
+
 In order to reproduce the **Table 3** from the article, summarizing the matrix multiplication performance for various strategies, use the following compilation toggles
 (**NOTE:** we use `MQOM2_OPTIONS="MQOM2_VARIANT=cat1-gf16-fast-r5"` for the L1 security level, use `MQOM2_OPTIONS="MQOM2_VARIANT=cat3-gf16-fast-r5"` for the L3 level, and
 `MQOM2_OPTIONS="MQOM2_VARIANT=cat5-gf16-fast-r5"` for the L5 level):
@@ -284,10 +434,10 @@ The resulting benchmarks should be the following:
 
 | Implementation                          | F16 Fast L1 (n=56 / m̂=28, τ=17) | F16 Fast L3 (n=84 / m̂=42, τ=27) | F16 Fast L5 (n=116 / m̂=58, τ=36) |
 |----------------------------------------|----------------------------------|----------------------------------|-----------------------------------|
-| F256 Log/Exp tables ★                  | 15.3                             | 80.3                             | 277                               |
-| Full F256 mult table †                 | 10.7                             | 51.3                             | 176                               |
+| F256 Log/Exp tables ★                  | 15.3                             | 80.3                             | 290                               |
+| Full F256 mult table †                 | 10.7                             | 51.3                             | 189                               |
 | Basic circuit                          | 64.2                             | 348                              | 1213                              |
-| SWAR 32 bits                           | 21.3                             | 104                              | 353                               |
+| SWAR 32 bits                           | 21.3                             | 104                              | 356                               |
 | Bitslice                               | 20.0 (0.1)                       | 66.1 (0.3)                       | 338 (0.5)                         |
 | Bitslice with jump                     | 11.9 (0.1)                       | 39.2 (0.3)                       | 199 (0.5)                         |
 | Bitslice composite                     | 15.8 (0.1)                       | 52.2 (0.3)                       | 278 (0.5)                         |
@@ -298,6 +448,16 @@ The resulting benchmarks should be the following:
 
 
 ## MQOM base optimizations
+
+> **Automated reproduction (Table 4):**
+> ```console
+> # L1 security level (all profiles):
+> python3 tools/reproduce_table.py --table mqom-l1 --port /dev/ttyACM0
+> # L1 with Hardware profile (requires LEIA board):
+> python3 tools/reproduce_table.py --table mqom-l1 --port /dev/ttyUSB0 --board leia
+> # L3 and L5 security levels:
+> python3 tools/reproduce_table.py --table mqom-l3l5 --port /dev/ttyACM0
+> ```
 
 We provide hereafter the compilation configurations for the four profiles (LUT, Balanced, Memory and Hardware) of security level L1 in **Table 4** of the article.
 
@@ -423,6 +583,13 @@ The following results should be obtained:
 
 ### Detailed benchmarks
 
+> **Automated reproduction (detailed BLC/PIOP breakdown figure):**
+> ```console
+> python3 tools/reproduce_table.py --table detailed --port /dev/ttyACM0
+> # With LEIA board (adds Hardware profile):
+> python3 tools/reproduce_table.py --table detailed --port /dev/ttyUSB0 --board leia
+> ```
+
 For all the previous compilation, you can get **detailed benchmarks for BLC and PIOP components** using the `BENCHMARK=1` compilation toggle. For instance, for the L1 Balanced implementation Faster instance:
 
 ```console
@@ -492,6 +659,13 @@ the signature algorithm. In order to activate this, use `USE_SIGNATURE_BUFFER_AS
 
 ## MQOM one-tree experiments
 
+> **Automated reproduction (Table §"Using One-Tree Technique"):**
+> ```console
+> python3 tools/reproduce_table.py --table onetree --port /dev/ttyACM0
+> # With LEIA board (adds Hardware profile):
+> python3 tools/reproduce_table.py --table onetree --port /dev/ttyUSB0 --board leia
+> ```
+
 We will provide here the compilation command lines to reproduce the benchmark table in the "Using One-Tree Technique" Section of the paper.
 The global compilation toggle to activate the one-tree source folder is `ONETREE_TEST=1`.
 
@@ -557,7 +731,7 @@ The resulting benchmarks should be the following:
 |  |  |  | Bal.-2 | 9.95 | 101 | 63.1 | 2.50 | 21.5 | 21.6 |
 |  |  |  | Mem.-2 | 9.93 | 203 | 116 | 1.48 | 8.80 | 8.30 |
 |  |  |  | Hard.-2 | 8.96† | 55.1† | 49.7† | 1.28† | 11.7† | 12.1† |
-|                             | Short | 2 884 | LUT-1  | 5.99★ | 246★ | 249 | 3.65★ | 28.6★ | 29.2 |
+|                             | Short | 2 852 | LUT-1  | 5.99★ | 246★ | 249 | 3.65★ | 28.6★ | 29.2 |
 |  |  |  | Bal.-1 | 9.23 | 381 | 249 | 2.64 | 27.5 | 28.2 |
 |  |  |  | Mem.-1 | 9.20 | 991 | 591 | 1.62 | 10.1 | 9.47 |
 |  |  |  | Hard.-1 | 7.93† | 179† | 177† | 1.42† | 14.6† | 15.5† |
@@ -571,6 +745,11 @@ The resulting benchmarks should be the following:
 † Uses hardware acceleration for AES-128 (only on STM32F437).
 
 ## MQOM verification streaming experiments
+
+> **Automated reproduction (Table §"Streaming the signature"):**
+> ```console
+> python3 tools/reproduce_table.py --table streaming --port /dev/ttyACM0
+> ```
 
 The verification streaming experiments use the toggle `VERIFY_STREAM_TEST=1`. In order to reproduce the Table for the section "Streaming the signature", one must compile the LUT profile implementation with the
 following options for L1 Fast:
@@ -595,6 +774,11 @@ The resulting benchmarks should be the following:
 
 
 ## MQOM pre-signature experiments
+
+> **Automated reproduction (Table §"Pre-signature"):**
+> ```console
+> python3 tools/reproduce_table.py --table presign --port /dev/ttyACM0
+> ```
 
 The pre-signature experiments use the toggle `PRESIGN_TEST=1`. In order to reproduce the performance Table for the section "Pre-signature", one must compile the Balanced profile implementation with the following options for L1 Short using **the original PoW (Proof-of-Work)**:
 
@@ -632,7 +816,7 @@ The resulting benchmarks should be the following:
 |----------------------------------|-----------|-----------|---------|--------|
 | MQOM F16 Short R5                | 2 916 B   | 464 B     | 288     | 3.84   |
 | MQOM F16 Short R5 – LowPoW       | 3 152 B   | 492 B     | 309     | 0.91   |
-| MQOM F16 Fast R5                 | 3 328 B   | 604 B     | 66.4    | 6.91   |
-| MQOM F16 Fast R5 – LowPoW        | 3 516 B   | 632 B     | 69.3    | 0.98   |
+| MQOM F16 Fast R5                 | 3 280 B   | 604 B     | 66.4    | 6.91   |
+| MQOM F16 Fast R5 – LowPoW        | 3 468 B   | 632 B     | 69.3    | 0.98   |
 
 

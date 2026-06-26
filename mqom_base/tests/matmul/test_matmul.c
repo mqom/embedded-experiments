@@ -313,5 +313,6 @@ int main(int argc, char *argv[])
     printf(" - Transform(bitslice-composite-cond): %.2f cycles \r\n", btimer_get_cycles(&timer_matmul[8]));
     printf(" - MatMul(bitslice-composite-cond): %.2f cycles \r\n", btimer_get_cycles(&timer_matmul[9]));
 
+	printf("END SERIAL COMM\r\n");
 	return 0;
 }
