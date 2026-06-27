@@ -221,6 +221,11 @@ See the [Quick Reproduction Guide](#quick-reproduction-guide) below for usage
 examples, the full list of `--table` arguments, and instructions for running
 inside Docker or natively.
 
+> **Note:** the script holds an exclusive lock on the serial port for the
+> entire session. Close any other tool reading the same port (e.g. `minicom`,
+> `screen`, `picocom`, Arduino Serial Monitor) before running the script,
+> otherwise the port will be unavailable and the script will fail to open it.
+
 
 ## Quick Reproduction Guide
 
