@@ -64,12 +64,12 @@ _SPIN_CHARS = "|/-\\"
 
 
 def _spin_write(frame, msg):
-    sys.stdout.write(f"\r  {_SPIN_CHARS[frame % 4]} {msg}   ")
+    sys.stdout.write(f"\033[2K\r  {_SPIN_CHARS[frame % 4]} {msg}")
     sys.stdout.flush()
 
 
 def _spin_clear(msg):
-    sys.stdout.write(f"\r  {msg}{' ' * 40}\n")
+    sys.stdout.write(f"\033[2K\r  {msg}\n")
     sys.stdout.flush()
 
 
@@ -126,13 +126,13 @@ def capture_uart(ser, timeout, reflash_fn=None, verbose=False):
             last_g = time.time()
             continue
 
+        lines.append(line)
         if verbose:
             print(f"    > {line}")
         else:
             _spin_write(spin_frame, f"Capturing serial… ({len(lines)} lines)")
             spin_frame += 1
 
-        lines.append(line)
         if "END SERIAL COMM" in line:
             break
     else:
