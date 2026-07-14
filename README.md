@@ -374,16 +374,19 @@ The resulting benchmarks should be the following:
 
 | Scheme            | Variant          | Bitslice KeySch. | Bitslice Enc. | Table-based KeySch. | Table-based Enc. | Hardware KeySch. + Enc. |
 |------------------|------------------|------------------|---------------|---------------------|------------------|--------------------------|
-| AES-128          | `x1`             | 405              | 4 910         | 405                 | 800              | 529                      |
-| AES-128          | `x2`             | 810              | 5 056         | 810                 | 1 500            | 909                      |
-| AES-128          | `x2` amortized   | 2 751            | 2 879         | -                   | -                | -                        |
-| AES-128          | `x4`             | 1 620            | 10 037        | 1 620               | 2 900            | 1 661                    |
-| AES-128          | `x4` amortized   | 5 405            | 5 660         | -                   | -                | -                        |
-| Rijndael-256-256 | `x1`             | 1 398            | 21 121        | 1 300               | 3 345            | N/A                      |
-| Rijndael-256-256 | `x2`             | 2 800            | 23 043        | 2 500               | 6 600            | N/A                      |
-| Rijndael-256-256 | `x2` amortized   | 12 224           | 15 695        | -                   | -                | N/A                      |
-| Rijndael-256-256 | `x4`             | 5 600            | 46 488        | 5 334               | 14 000           | N/A                      |
-| Rijndael-256-256 | `x4` amortized   | 24 624           | 32 024        | -                   | -                | N/A                      |
+| AES-128          | `x1`             | 443              | 5 183         | 443                 | 866              | 529                      |
+| AES-128          | `x2`             | 886              | 5 231         | 886                 | 1 617            | 909                      |
+| AES-128          | `x2` amortized   | 2 896            | 3 071         | -                   | -                | -                        |
+| AES-128          | `x4`             | 1 772            | 10 372        | 1 772               | 3 082            | 1 661                    |
+| AES-128          | `x4` amortized   | 5 674            | 6 039         | -                   | -                | -                        |
+| Rijndael-256-256 | `x1`             | 1 452            | 22 790        | 1 435               | 4 122            | N/A                      |
+| Rijndael-256-256 | `x2`             | 2 904            | 25 136        | 2 870               | 8 130            | N/A                      |
+| Rijndael-256-256 | `x2` amortized   | 10 628           | 16 984        | -                   | -                | N/A                      |
+| Rijndael-256-256 | `x4`             | 5 808            | 50 502        | 5 740               | 16 113           | N/A                      |
+| Rijndael-256-256 | `x4` amortized   | 21 135           | 33 861        | -                   | -                | N/A                      |
+
+**NOTE**: the figures provided in the above table slightly differ from the ones in the paper because the code for Rijndael has been updated a bit
+since the benchmarking campaign.
 
 ### Hardware acceleration Polling versus DMA
 
