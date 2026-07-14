@@ -1,8 +1,9 @@
 # Experiments with embedded MQOM
 
 The current repository contains experimental code for the [MQOM](https://mqom.org/) NIST PQ round 2 on-ramp signature candidate.
-This code is a companion to the article **"Breaking the Myth of MPCitH Inefficiency: Optimizing MQOM for Embedded Platforms"** that
-details all the optimization strategies included here. The code provided here contains patches of the [upstream MQOM code](https://github.com/mqom/mqom-v2)
+This code is a companion to the article **"Breaking the Myth of MPCitH Inefficiency: Optimizing MQOM for Embedded Platforms"** (the extended
+version can be found [here](https://eprint.iacr.org/archive/2026/078/20260424:133915)) that details all the optimization strategies included here.
+The code provided here contains patches of the [upstream MQOM code](https://github.com/mqom/mqom-v2)
 in its version 2.1 (the last specification update at the time of writing the article).
 
 The source code is mostly split in four parts:
@@ -229,6 +230,13 @@ inside Docker or natively.
 
 ## Quick Reproduction Guide
 
+The Tables and Figures numbering for reproduction are from [this extended paper](https://eprint.iacr.org/archive/2026/078/20260424:133915).
+For an exact reproduction, we strongly advise running the script using the provided Docker in a Linux environment.
+For those using another OS (such as macOS or Windows), it is possible to use the script in two steps: using the `--no-flash` option
+for compilation only by calling the script inside the Docker environment (or compile by hand inside this environment), and then use the script with
+the `--no-compile` option in your native environment so that the already compiled firmware can be flashed (you will obviously have to install all the
+script dependencies for flashing in your native environment).
+
 Run from the repository root (install dependencies first — see
 [Python script for reproduction](#python-script-for-reproduction) above):
 
@@ -243,14 +251,14 @@ LEIA-only runs.
 
 | `--table` argument | Paper Table / Figure | Board(s) needed |
 |--------------------|----------------------|-----------------|
-| `rijndael`   | **Table 1** (AES-128 & Rijndael-256 bitslice/table/HW) + **Figure 3** (DMA vs Polling, `--board leia` only) | Nucleo L4R5ZI; + LEIA with `--board leia` |
-| `matmul`     | **Table 3** (matrix multiplication strategies, all security levels) | Nucleo L4R5ZI |
-| `mqom-l1`    | **Table 4** — L1 security level (LUT / Balanced / Memory / Hardware profiles) | Nucleo L4R5ZI; + LEIA with `--board leia` (HW profile) |
-| `mqom-l3l5`  | **Table 4** — L3 and L5 security levels | Nucleo L4R5ZI |
-| `onetree`    | Table in §"Using One-Tree Technique" | Nucleo L4R5ZI; + LEIA with `--board leia` |
-| `streaming`  | Table in §"Streaming the signature" | Nucleo L4R5ZI |
-| `presign`    | Table in §"Pre-signature" | Nucleo L4R5ZI |
-| `detailed`   | Detailed BLC/PIOP breakdown figure (§"Detailed benchmarks") | Nucleo L4R5ZI; + LEIA with `--board leia` |
+| `rijndael`   | **Table 2** (AES-128 & Rijndael-256 bitslice/table/HW) + **Figure 3** (DMA vs Polling, `--board leia` only) | Nucleo L4R5ZI; + LEIA with `--board leia` |
+| `matmul`     | **Table 4** (matrix multiplication strategies, all security levels) | Nucleo L4R5ZI |
+| `mqom-l1`    | **Table 5** — L1 security level (LUT / Balanced / Memory / Hardware profiles) | Nucleo L4R5ZI; + LEIA with `--board leia` (HW profile) |
+| `mqom-l3l5`  | **Table 6** — L3 and L5 security levels | Nucleo L4R5ZI |
+| `onetree`    | **Table 7** in §"Using One-Tree Technique" | Nucleo L4R5ZI; + LEIA with `--board leia` |
+| `streaming`  | **Table 8** in §"Streaming the signature" | Nucleo L4R5ZI |
+| `presign`    | **Table 9** in §"Pre-signature" | Nucleo L4R5ZI |
+| `detailed`   | Detailed BLC/PIOP breakdown **Figure 6** (§"Detailed benchmarks") | Nucleo L4R5ZI; + LEIA with `--board leia` |
 
 List all tables with their descriptions:
 
